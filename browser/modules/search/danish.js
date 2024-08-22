@@ -94,9 +94,13 @@ module.exports = {
         let placeholder = window.vidiConfig?.searchConfig?.placeholderText;
         if (placeholder) {
             searchTxt = placeholder;
-            $(".custom-search.tt-input").attr("placeholder",
-                searchTxt
-            );
+            let inputElemet = $(".custom-search.tt-input");
+            if (!inputElemet.length) {
+                inputElemet = $(".custom-search");
+            }
+            if (inputElemet.length) {
+                inputElemet.attr("placeholder",searchTxt);
+            }
         } else {
             searchTxt = "Adresse, matr. nr.";
             if (sfeSearchActive) {
