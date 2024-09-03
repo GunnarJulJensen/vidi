@@ -92,23 +92,23 @@ module.exports = {
         if (caller !== 'init') advanced = false;
         // adjust search text
         let placeholder = window.vidiConfig?.searchConfig?.placeholderText;
-        if (placeholder) {
+            if (placeholder) {
             searchTxt = placeholder;
-            $(".custom-search").attr("placeholder",searchTxt);
-           
+            $(".custom-search.typeahead").attr("placeholder",
+                searchTxt
+            );
         } else {
             searchTxt = "Adresse, matr. nr.";
             if (sfeSearchActive) {
-                $(".custom-search").attr("placeholder",
+                $(".custom-search.typeahead").attr("placeholder",
                     searchTxt
                     + (esrSearchActive ? ", ESR nr. " : "")
                     + " eller SFE nr.");
             } else if (esrSearchActive) {
-                $(".custom-search").attr("placeholder",
+                $(".custom-search.typeahead").attr("placeholder",
                     searchTxt + " eller ESR nr.");
             }
         }
-
         let colorPicker = ` 
                  <div style="padding: 7px">
                     <div class="row">
@@ -271,7 +271,7 @@ module.exports = {
                 header: '<h2 class="typeahead-heading">Adresser</h2>'
             },
             source: function (query, cb) {
-                if (query.match(/\d+/g) === null && query.match(/\s+/g) === null) {
+                if (query.match(/\d+/g) === null && query.match(/\s+/g) === null) o{
                     type1 = "vejnavn,bynavn";
                 }
                 if (query.match(/\d+/g) === null && query.match(/\s+/g) !== null) {
