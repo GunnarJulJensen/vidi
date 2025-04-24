@@ -95,6 +95,15 @@ module.exports = {
             componentDidMount() {
                 
                 alert("componentDidMount")
+                $('.bi-layout-text-window').on('click', function () {
+                        alert("click on icon")
+                        if (_self) {
+                            alert("click on icon OK ")
+                            _self.active(true);
+                        } else {
+                            alert("click on icon else")
+                        }
+                    });
             }
 
             componentDidUpdate(prevProps) {
@@ -106,6 +115,7 @@ module.exports = {
                 return (
                     <div role="tabpanel">
                         <p>GET TO WORK</p>
+                        
                     </div>
                 );
             }
