@@ -143,6 +143,7 @@ module.exports = {
             {"offlineMap": ["index"]},
             {"session": ["index"]},
             {"editor": ["index"]},
+            {"mapstatus": ["index"]},
         ],
         "server": [
             {"conflictSearch": ["index"]},
