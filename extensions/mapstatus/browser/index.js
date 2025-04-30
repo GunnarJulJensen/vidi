@@ -12,7 +12,6 @@
  */
 var cloud;
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
-import f from "session-file-store";
 import { convert as geojsonToWKT } from "terraformer-wkt-parser"
 
 let sqlQuery;
@@ -144,6 +143,30 @@ module.exports = {
                             onClick={() => _self.active(true)}
                             className="btn btn-outline-secondary"
                         >Start</button>
+                        {store.layer?.getLayers().length}
+                        <table className="table table-striped table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th scope="col">ID</th>
+                                    <th scope="col">Opstr.</th>
+                                    <th scope="col">Nedstr.</th>
+                                    <th scope="col">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mapstatus-table">
+                                {store.layer?.getLayers().map((layer, index) => {
+                                    return (
+                                        <tr key={index}>
+                                            <td>{layer.feature.properties.id}</td>
+                                            <td>{layer.feature.properties.fra_brønd}</td>
+                                            <td>{layer.feature.properties.til_brønd}</td>
+                                            <td>{layer.feature.properties.status}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>    
+                        </table>
+
                     </div>
                 );
             }
