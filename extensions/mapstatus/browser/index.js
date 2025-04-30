@@ -63,6 +63,7 @@ const _makeSearch = function (wkt) {
                         console.log("feature " + JSON.stringify(geoJson));
                     })
                 }
+                backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
             },200)},
             null, null, null, [fullLayerName]);
     }
@@ -130,6 +131,11 @@ module.exports = {
 
             componentDidMount() {
                 $('.bi-layout-text-window').on('click', function () { });
+                backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:update`, () => {
+                    alert("update 1");
+                    this.forceUpdate(); // Trigger re-render når noget ændrer sig
+                    alert("update 2");
+                });
             }
 
             componentDidUpdate(prevProps) { }
@@ -315,6 +321,7 @@ module.exports = {
 
         cloud.get().map.on('draw:created', function (e) {
             _self.startShapeSearch(e);
+            backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`)
         });
         cloud.get().map.on('draw:drawstart', function () {
             // Clear all SQL query layers
