@@ -12,18 +12,22 @@
  */
 var cloud;
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
+import _ from "lodash";
 import { convert as geojsonToWKT } from "terraformer-wkt-parser"
 
-let sqlQuery;
 let backboneEvents;
-let active = false;
-let state;
-let bindEvent;
+let draw;
+let qstore = [];
+const _geojson = {
+    type: "FeatureCollection",
+    features: [],
+};
 let drawControl = null;
-let meta;
-let searchOn = false;
-let serializeLayers;
 let drawnItems = new L.FeatureGroup();
+let meta;
+let serializeLayers;
+let sqlQuery;
+let state;
 const store = new geocloud.sqlStore({
     clickable: true
 });
@@ -48,27 +52,59 @@ var utils;
  * @type {string}
  */
 
-const _makeSearch = function (wkt) {
-    let qstore = [];
-    const fullLayerName = _self.fullLayerName("ledning_drift");
-    
-    if (wkt && fullLayerName) {
-        
-        sqlQuery.init(qstore, wkt, "4326",(store) => {
-            setTimeout(() => {
-                if (store?.geoJSON) {
-                    store.layer.eachLayer((feature) => {
-                        const geoJson = feature.toGeoJSON();
-                        console.log("feature " + feature);
-                        console.log("feature " + JSON.stringify(geoJson));
-                    })
+const selectedFeaturesClear = () => {
+    _geojson.features = [];
+};
+const selectedFeaturesAdd = (feature) => {
+    _geojson.features.push(feature);
+};
+
+const selectedFeaturesLength = () => {
+    return _geojson.features.length;
+};
+
+const selectedFeaturesGet = () => {
+    return _geojson.features;
+};
+
+const setSelectedStyle = () => {
+    const colorStyle = { color: '#ffd000' };    
+    for (let layerId in cloud.get().map._layers) {
+        let layer = cloud.get().map._layers[layerId];
+        if (layer instanceof L.GeoJSON) {
+            layer.setStyle(colorStyle);
+
+            layer.eachLayer(function(feature) {
+                feature.options.style = colorStyle;
+            });
+        }
+    }
+};
+
+const _makeSearch = (wkt) => {
+    try {
+        const fullLayerName = _self.fullLayerName("ledning_drift");
+        selectedFeaturesClear();
+
+        if (!wkt || !fullLayerName) {
+            return;
+        }
+
+        sqlQuery.init(qstore, wkt, "4326", () => {
+            if (qstore.length >= 1 && qstore[0].geoJSON) {
+
+                for (const feature of qstore[0].geoJSON.features) {
+                    selectedFeaturesAdd(feature);
                 }
                 backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
-            },200)},
-            null, null, null, [fullLayerName]);
+            }
+        }, null, null, null, [fullLayerName], true, null, null);
+
+    } catch (e) {
+        console.error("Error in _makeSearch:", e);
     }
-    alert("qstore " + JSON.stringify(qstore));
 };
+
 
 const exId = "mapstatus";
 module.exports = {
@@ -78,17 +114,20 @@ module.exports = {
      * @returns {exports}
      */
     set: function (o) {
-        cloud = o.cloud;
-        utils = o.utils;
-        sqlQuery = o.sqlQuery;
+
         backboneEvents = o.backboneEvents;
-        state = o.state;
         bindEvent = o.bindEvent;
-        meta = o.meta;
-        layerTree = o.layerTree;
-        switchLayer = o.switchLayer;
+        cloud = o.cloud;
+        draw = o.draw;
         layers = o.layers;
+        layerTree = o.layerTree;
+        meta = o.meta;
         serializeLayers = o.serializeLayers;
+        sqlQuery = o.sqlQuery;
+        state = o.state;
+        switchLayer = o.switchLayer;
+        utils = o.utils;
+
         _self = this;
 
         return this;
@@ -114,27 +153,20 @@ module.exports = {
             _self.reset();
         });
 
-        cloud.get().map.addLayer(drawnItems);
-        store.layer = drawnItems;
-
-        cloud.get().map.addLayer(drawnItems);
         utils.createMainTab(exId, utils.__("MapStatus", dict), utils.__("Info", dict), require('./../../../browser/modules/height')().max, "bi bi-layout-text-window");
 
 
         class MapStatus extends React.Component {
             constructor(props) {
                 super(props);
-                this.state = {
-
-                };
+                this.state = {};
             }
 
             componentDidMount() {
                 $('.bi-layout-text-window').on('click', function () { });
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:update`, () => {
-                    alert("update 1");
                     this.forceUpdate(); // Trigger re-render når noget ændrer sig
-                    alert("update 2");
+                    setSelectedStyle();
                 });
             }
 
@@ -149,7 +181,9 @@ module.exports = {
                             onClick={() => _self.active(true)}
                             className="btn btn-outline-secondary"
                         >Start</button>
-                        {store.layer?.getLayers().length}
+                        
+                        <p>Antal: {selectedFeaturesLength()}</p>
+                        
                         <table className="table table-striped table-hover table-sm">
                             <thead>
                                 <tr>
@@ -160,34 +194,27 @@ module.exports = {
                                 </tr>
                             </thead>
                             <tbody id="mapstatus-table">
-                                {store.layer?.getLayers().map((layer, index) => {
+                                {selectedFeaturesGet().map((feature, index) => {
                                     return (
                                         <tr key={index}>
-                                            <td>{layer.feature.properties.id}</td>
-                                            <td>{layer.feature.properties.fra_brønd}</td>
-                                            <td>{layer.feature.properties.til_brønd}</td>
-                                            <td>{layer.feature.properties.status}</td>
+                                            <td>{feature.properties.id}</td>
+                                            <td>{feature.properties.fra_brønd}</td>
+                                            <td>{feature.properties.til_brønd}</td>
+                                            <td>{feature.properties.status}</td>
                                         </tr>
                                     );
                                 })}
-                            </tbody>    
+                            </tbody>
                         </table>
-
                     </div>
                 );
             }
         }
         try {
-            ReactDOM
-                .render(
-                    <MapStatus />,
-                    document
-                        .getElementById(exId)
-                )
-                ;
+            ReactDOM.render(<MapStatus />, document.getElementById(exId));
         } catch
         (e) {
-
+            console.error("Error in MapStatus:", e);
         }
 
     },
@@ -243,44 +270,16 @@ module.exports = {
         } else {
             console.error("Layer not found in metadata: " + layerId);
             return '';
-        }   
+        }
     },
     getState: () => {
-        let drawnItems = serializeLayers.serializeDrawnItems(true);
-        return { drawnItems };
+
+        return {};
     },
     recreateDrawnings: (parr, clear) => {
         alert("recreateDrawnings " + JSON.stringify(parr));
     },
-    /**
-     * Applies externally provided state
-     */
-    applyState: (newState) => {
 
-        return new Promise((resolve) => {
-            store.reset();
-            alert("applyState " + JSON.stringify(newState));
-
-            _self.startDrawControl(false);
-            if (!isStarted) {
-                setTimeout(() => {
-                    _self.resetState();
-                    backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
-                    isStarted = true;
-                }, 0);
-                resolve();
-                return;
-            }
-            if (newState.drawnItems && newState.drawnItems.length > 0) {
-                setTimeout(() => {
-                    _self.recreateDrawnings(newState.drawnItems, false);
-                    resolve();
-                }, 100);
-            } else {
-                resolve();
-            }
-        });
-    },
 
     startDrawControl: (enable) => {
         _self.bindDrawEvents();
@@ -306,7 +305,7 @@ module.exports = {
     },
     startShapeSearch: (drawEvent) => {
         try {
-            var layer = drawEvent.layer; 
+            var layer = drawEvent.layer;
             var geojson = layer.toGeoJSON();
             var wkt = geojsonToWKT(geojson.geometry);
             _makeSearch(wkt);
@@ -317,7 +316,6 @@ module.exports = {
     bindDrawEvents: () => {
         backboneEvents.get().trigger(`drawing:turnedOn`);
 
-        cloud.get().map.addLayer(drawnItems);
 
         cloud.get().map.on('draw:created', function (e) {
             _self.startShapeSearch(e);
@@ -328,7 +326,7 @@ module.exports = {
             backboneEvents.get().trigger("sqlQuery:clear");
         });
         cloud.get().map.on('draw:drawstop', function (e) {
-            
+
         });
         cloud.get().map.on('draw:editstop', function (e) {
             _self.startShapeSearch(e);
