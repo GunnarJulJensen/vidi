@@ -62,20 +62,38 @@ const selectedFeaturesAdd = (feature) => {
 const selectedFeaturesLength = () => {
     return _geojson.features.length;
 };
+const zoomToFeature = (feature) => {
+    const map = cloud.get().map;    
+    const bounds = L.geoJSON(feature).getBounds();
+    map.fitBounds(bounds, { maxZoom: 21 });
+    map.setView(bounds.getCenter(), map.getZoom(), { animate: true });
+}
+
+ 
+
 
 const selectedFeaturesGet = () => {
     return _geojson.features;
 };
 
-const setSelectedStyle = () => {
+const setSelectedStyle = (hiliteFeaure) => {
     const colorStyle = { color: '#ffd000' };    
+    const hiliteStyle = { color: '#800080' };
     for (let layerId in cloud.get().map._layers) {
         let layer = cloud.get().map._layers[layerId];
         if (layer instanceof L.GeoJSON) {
             layer.setStyle(colorStyle);
 
             layer.eachLayer(function(feature) {
-                feature.options.style = colorStyle;
+                if   (hiliteFeaure && feature.feature.properties.id == hiliteFeaure.properties.id)              
+                    feature.setStyle(hiliteStyle);
+                else
+                    feature.setStyle(colorStyle);
+                
+                // feature.options.style = colorStyle;
+                //   feature.options.style = 
+                //   (hiliteFeaure && feature.feature.properties.id == hiliteFeaure.properties.id)
+                //     ? hiliteStyle: colorStyle;
             });
         }
     }
@@ -138,16 +156,10 @@ module.exports = {
 
 
     init: function () {
-        var dict = {};
-        /**
-         *
-         */
-        var React = require('react');
-
-        /**
-         *
-         */
-        var ReactDOM = require('react-dom');
+        const dict = {};
+        const React = require('react');
+        const ReactDOM = require('react-dom');
+        
 
         backboneEvents.get().on(`reset:all reset:${MAPSTATUS_MODULE_NAME}`, () => {
             _self.reset();
@@ -157,11 +169,15 @@ module.exports = {
 
 
         class MapStatus extends React.Component {
-            constructor(props) {
-                super(props);
-                this.state = {};
-            }
 
+            constructor(props) {
+                super(props);   
+                this.state = {
+                    selectedRowIndex: -1
+                };
+
+            }
+            
             componentDidMount() {
                 $('.bi-layout-text-window').on('click', function () { });
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:update`, () => {
@@ -172,6 +188,11 @@ module.exports = {
 
             componentDidUpdate(prevProps) { }
 
+            featureRowClick (feature, index ) {
+                this.setState({ selectedRowIndex: index });
+                zoomToFeature(feature); 
+                setSelectedStyle(feature); 
+             }
 
             render() {
                 return (
@@ -196,7 +217,14 @@ module.exports = {
                             <tbody id="mapstatus-table">
                                 {selectedFeaturesGet().map((feature, index) => {
                                     return (
-                                        <tr key={index}>
+                                        <tr 
+                                          onClick={ () => this.featureRowClick(feature, index)} key={index}
+                                          style={{ 
+                                            cursor: 'pointer', 
+                                            border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
+                                            fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
+                                            }}>
+
                                             <td>{feature.properties.id}</td>
                                             <td>{feature.properties.fra_brønd}</td>
                                             <td>{feature.properties.til_brønd}</td>
@@ -209,6 +237,7 @@ module.exports = {
                     </div>
                 );
             }
+
         }
         try {
             ReactDOM.render(<MapStatus />, document.getElementById(exId));
@@ -218,6 +247,7 @@ module.exports = {
         }
 
     },
+    
     clickDraw() {
         _self.active(true);
     },
