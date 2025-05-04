@@ -22,6 +22,7 @@ const _geojson = {
     type: "FeatureCollection",
     features: [],
 };
+const _geojsonLayer= L.geoJSON;
 let drawControl = null;
 let drawnItems = new L.FeatureGroup();
 let meta;
@@ -75,10 +76,27 @@ const zoomToFeature = (feature) => {
 const selectedFeaturesGet = () => {
     return _geojson.features;
 };
+const selectedFeaturesAddAll = (hiliteFeaure) => {
+    const colorStyle = { color: '#ffd000' ,weight: 3 };    
+    const hiliteStyle = { color: '#800080',weight: 4 };
+    _geojsonLayer(_geojson, {
+        style: function (feature) {
+            if (hiliteFeaure && feature.feature.properties.id == hiliteFeaure.properties.id)              
+               return hiliteStyle;
+            return colorStyle;
+        },
+        
+        onEachFeature: function (feature, layer)  {
+          if (feature.properties && feature.properties.id) {
+            layer.bindPopup(feature.properties.id);
+          }
+        }
+      }).addTo(cloud.get().map);
+};
 
 const setSelectedStyle = (hiliteFeaure) => {
-    const colorStyle = { color: '#ffd000' };    
-    const hiliteStyle = { color: '#800080' };
+    const colorStyle = { color: '#ffd000' ,weight: 3 };    
+    const hiliteStyle = { color: '#800080',weight: 4 };
     for (let layerId in cloud.get().map._layers) {
         let layer = cloud.get().map._layers[layerId];
         if (layer instanceof L.GeoJSON) {
@@ -89,11 +107,6 @@ const setSelectedStyle = (hiliteFeaure) => {
                     feature.setStyle(hiliteStyle);
                 else
                     feature.setStyle(colorStyle);
-                
-                // feature.options.style = colorStyle;
-                //   feature.options.style = 
-                //   (hiliteFeaure && feature.feature.properties.id == hiliteFeaure.properties.id)
-                //     ? hiliteStyle: colorStyle;
             });
         }
     }
@@ -117,7 +130,7 @@ const _makeSearch = (wkt) => {
                 backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
             }
         }, null, null, null, [fullLayerName], true, null, null);
-
+        selectedFeaturesAddAll();
     } catch (e) {
         console.error("Error in _makeSearch:", e);
     }
@@ -344,6 +357,18 @@ module.exports = {
         }
     },
     bindDrawEvents: () => {
+        cloud.get().map.on('preclick', (e) => {
+            alert("preclick i kort ");
+            
+        });
+        
+        cloud.get().map.on('click', function (e) {
+            alert("klik i kort ");
+            alert("antal: "+ selectedFeaturesLength());
+            selectedFeaturesAddAll();
+             
+        });
+
         backboneEvents.get().trigger(`drawing:turnedOn`);
 
 
@@ -353,7 +378,7 @@ module.exports = {
         });
         cloud.get().map.on('draw:drawstart', function () {
             // Clear all SQL query layers
-            backboneEvents.get().trigger("sqlQuery:clear");
+            // backboneEvents.get().trigger("sqlQuery:clear");
         });
         cloud.get().map.on('draw:drawstop', function (e) {
 
@@ -369,7 +394,7 @@ module.exports = {
         if (drawControl) {
             return drawControl;
         }
-        L.drawLocal = require('../../../browser/modules/drawLocales/draw.js');
+        // L.drawLocal = require('../../../browser/modules/drawLocales/draw.js');
         return new L.Control.Draw({
             position: 'topright',
             draw: {
@@ -403,10 +428,10 @@ module.exports = {
                 circlemarker: false,
 
             },
-            edit: {
-                featureGroup: drawnItems,
-                remove: true
-            }
+            // edit: {
+            //     featureGroup: drawnItems,
+            //     remove: true
+            // }
         });
     },
     unbindEvents: () => {
