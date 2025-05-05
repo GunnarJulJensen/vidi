@@ -12,8 +12,6 @@
  */
 var cloud;
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
-import { get } from "grunt";
-import _ from "lodash";
 import { convert as geojsonToWKT } from "terraformer-wkt-parser"
 
 let backboneEvents;
@@ -71,7 +69,8 @@ const colorStyle = { color: '#ffd000', weight: 3 };
 const hiliteStyle = { color: '#800080',weight: 4 };
 
 const selectedFeaturesUpdate = (hiliteFeaureId) => {
-
+    // _geojsonLayer.clearLayers();
+    alert("selectedFeaturesUpdate antal: " + _geojson.features.length);
     _geojsonLayer(_geojson, {
         style: function (feature) {
             if (hiliteFeaureId && feature.properties.id == hiliteFeaureId)
@@ -103,7 +102,9 @@ const selectedFeaturesHilite = (hiliteFeaureId) => {
                 layer.eachLayer(function(feature) {
                 if   (hiliteFeaureId && feature.feature.properties.id == hiliteFeaureId) {
                     feature.setStyle(hiliteStyle);
-                }              
+                } else {
+                    feature.setStyle(colorStyle);
+                }             
             });
         }
     }
@@ -194,11 +195,13 @@ module.exports = {
             componentDidMount() {
                 $('.bi-layout-text-window').on('click', function () { });
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:update`, () => {
-                    this.forceUpdate(); // Trigger re-render når noget ændrer sig
+                    this.forceUpdate(); 
                 });
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:updateSelected`, (selectedFeatureId) => {
-                    alert("selectedFeatureId: " + selectedFeatureId);
-                    //this.setState({ selectedRowIndex: selectedFeatureId });
+                    const si  = selectedFeaturesGet().findIndex(feature => feature.properties.id == selectedFeatureId);
+                    this.state.selectedRowIndex = si;
+                    this.forceUpdate(); 
+
                 });
             }
 
