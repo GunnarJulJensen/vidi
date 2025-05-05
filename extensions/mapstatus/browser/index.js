@@ -24,7 +24,7 @@ const _geojsonLayer = L.geoJSON;
 let drawControl = null;
 let meta;
 let sqlQuery;
- 
+
 let _self = false;
 
 /**
@@ -42,7 +42,7 @@ const { func } = require("prop-types");
 var utils;
 
 
-let selectedFeatureId =0;
+let selectedFeatureId = 0;
 const selectedFeaturesClear = () => {
     _geojson.features = [];
 };
@@ -66,11 +66,9 @@ const selectedFeaturesGet = () => {
 };
 
 const colorStyle = { color: '#ffd000', weight: 3 };
-const hiliteStyle = { color: '#800080',weight: 4 };
+const hiliteStyle = { color: '#800080', weight: 4 };
 
 const selectedFeaturesUpdate = (hiliteFeaureId) => {
-    // _geojsonLayer.clearLayers();
-    alert("selectedFeaturesUpdate antal: " + _geojson.features.length);
     _geojsonLayer(_geojson, {
         style: function (feature) {
             if (hiliteFeaureId && feature.properties.id == hiliteFeaureId)
@@ -86,25 +84,25 @@ const selectedFeaturesUpdate = (hiliteFeaureId) => {
                     selectedFeatureId = feature.properties.id;
                     selectedFeaturesHilite(selectedFeatureId);
                     backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:updateSelected`, selectedFeatureId);
-                 });
+                });
             }
         }
     }).addTo(cloud.get().map);
 };
 
 const selectedFeaturesHilite = (hiliteFeaureId) => {
-    if (!hiliteFeaureId) 
+    if (!hiliteFeaureId)
         return;
 
     for (let layerId in cloud.get().map._layers) {
         let layer = cloud.get().map._layers[layerId];
         if (layer instanceof L.GeoJSON) {
-                layer.eachLayer(function(feature) {
-                if   (hiliteFeaureId && feature.feature.properties.id == hiliteFeaureId) {
+            layer.eachLayer(function (feature) {
+                if (hiliteFeaureId && feature.feature.properties.id == hiliteFeaureId) {
                     feature.setStyle(hiliteStyle);
                 } else {
                     feature.setStyle(colorStyle);
-                }             
+                }
             });
         }
     }
@@ -195,12 +193,12 @@ module.exports = {
             componentDidMount() {
                 $('.bi-layout-text-window').on('click', function () { });
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:update`, () => {
-                    this.forceUpdate(); 
+                    this.forceUpdate();
                 });
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:updateSelected`, (selectedFeatureId) => {
-                    const si  = selectedFeaturesGet().findIndex(feature => feature.properties.id == selectedFeatureId);
+                    const si = selectedFeaturesGet().findIndex(feature => feature.properties.id == selectedFeatureId);
                     this.state.selectedRowIndex = si;
-                    this.forceUpdate(); 
+                    this.forceUpdate();
 
                 });
             }
@@ -216,50 +214,109 @@ module.exports = {
             render() {
                 return (
                     <div role="tabpanel">
-                        <p>GET TO WORK</p>
                         <button
                             onClick={() => _self.active(true)}
                             className="btn btn-outline-secondary"
                         >Start</button>
-
-                        <p>Antal: {selectedFeaturesLength()}</p>
-
-                        <table className="table table-striped table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th scope="col">ID</th>
-                                    <th scope="col">Opstr.</th>
-                                    <th scope="col">Nedstr.</th>
-                                    <th scope="col">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mapstatus-table">
-                                {selectedFeaturesGet().map((feature, index) => {
+                        <div className="form-select">
+                            <p>Vælg projekt</p>
+                            <select  id="selectProject" onChange={() => _self.active(true)}>
+                                <option selected value="0">Vælg projekt</option>
+                                {/* {selectedFeaturesGet().map((feature, index) => {
                                     return (
-                                        <tr
-                                            onClick={() => this.featureRowClick(feature, index)} key={index}
+                                        <option
+                                            key={index}
+                                            value={feature.properties.id}
+                                            onClick={() => this.featureRowClick(feature, index)}
                                             style={{
                                                 cursor: 'pointer',
                                                 border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
                                                 fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
                                             }}>
-
-                                            <td>{feature.properties.id}</td>
-                                            <td>{feature.properties.fra_brønd}</td>
-                                            <td>{feature.properties.til_brønd}</td>
-                                            <td>{feature.properties.status}</td>
-                                        </tr>
+                                            {feature.properties.fra_brønd} - {feature.properties.til_brønd}
+                                        </option>
                                     );
-                                })}
-                            </tbody>
-                        </table>
+                                })} */}
+                                <option value="1">Projekt 1. Indre Odense</option>
+                            </select>
+                        </div>
+                        {selectedFeaturesLength() > 0 && (
+                            <div style={{
+                                bottom: '5px',
+                                left: '550px',
+                                right: '100px',
+                                maxHeight: '30vh',
+                                marginLeft: '10px',
+                                marginRight: '10px',
+                                position: 'fixed',
+                                padding: '5px',
+                                zIndex: 1000,
+                                backgroundColor: 'white',
+                            }}>
+                                <h5>Valgte ledninger : {selectedFeaturesLength()} </h5>
+
+                                <table className="table table-striped table-hover table-sm">
+                                    <thead style={{
+                                        position: 'sticky',
+                                        top: 0,
+                                        backgroundColor: 'grey'
+                                    }}>
+                                        <tr>
+                                            <th scope="col">Opstr.</th>
+                                            <th scope="col">Nedstr.</th>
+                                            <th scope="col">System</th>
+                                            <th scope="col">Kategori</th>
+                                            <th scope="col">Materiale</th>
+                                            <th scope="col">Rør diameter</th>
+                                            <th scope="col">Længde</th>
+                                            <th scope="col">Fra kote</th>
+                                            <th scope="col">Til kote</th>
+                                            <th scope="col">Dybde</th>
+                                            <th scope="col">Fysisk indeks</th>
+                                            <th scope="col">Bemærkning</th>
+
+                                        </tr>
+                                    </thead>
+                                    <tbody style={{ overflowY: 'auto' }}>
+                                        {selectedFeaturesGet().map((feature, index) => {
+                                            return (
+                                                <tr
+                                                    onClick={() => this.featureRowClick(feature, index)} key={index}
+                                                    style={{
+                                                        cursor: 'pointer',
+                                                        border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
+                                                        fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
+                                                    }}>
+                                                    <td>{feature.properties.fra_brønd}</td>
+                                                    <td>{feature.properties.til_brønd}</td>
+                                                    <td>{feature.properties.system}</td>
+                                                    <td>{feature.properties.kategori}</td>
+                                                    <td>{feature.properties.materiale}</td>
+                                                    <td>{feature.properties.handelsmål}</td>
+                                                    <td>{feature.properties.længde}</td>
+                                                    <td>{feature.properties.fra_kote}</td>
+                                                    <td>{feature.properties.til_kote}</td>
+                                                    <td>MANGLER !</td>
+                                                    <td>{feature.properties.fysiskindeks}</td>
+                                                    <td>---</td>
+
+
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 );
             }
 
         }
+
         try {
             ReactDOM.render(<MapStatus />, document.getElementById(exId));
+
         } catch
         (e) {
             console.error("Error in MapStatus:", e);
@@ -363,7 +420,7 @@ module.exports = {
         }
     },
     bindDrawEvents: () => {
-   
+
         backboneEvents.get().trigger(`drawing:turnedOn`);
 
         cloud.get().map.on('draw:created', function (e) {
