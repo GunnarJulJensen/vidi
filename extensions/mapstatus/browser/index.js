@@ -12,26 +12,21 @@
  */
 var cloud;
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
+import { get } from "grunt";
 import _ from "lodash";
 import { convert as geojsonToWKT } from "terraformer-wkt-parser"
 
 let backboneEvents;
-let draw;
 let qstore = [];
 const _geojson = {
     type: "FeatureCollection",
     features: [],
 };
-const _geojsonLayer= L.geoJSON;
+const _geojsonLayer = L.geoJSON;
 let drawControl = null;
-let drawnItems = new L.FeatureGroup();
 let meta;
-let serializeLayers;
 let sqlQuery;
-let state;
-const store = new geocloud.sqlStore({
-    clickable: true
-});
+ 
 let _self = false;
 
 /**
@@ -48,11 +43,8 @@ const { func } = require("prop-types");
  */
 var utils;
 
-/**
- *
- * @type {string}
- */
 
+let selectedFeatureId =0;
 const selectedFeaturesClear = () => {
     _geojson.features = [];
 };
@@ -63,54 +55,60 @@ const selectedFeaturesAdd = (feature) => {
 const selectedFeaturesLength = () => {
     return _geojson.features.length;
 };
+
 const zoomToFeature = (feature) => {
-    const map = cloud.get().map;    
+    const map = cloud.get().map;
     const bounds = L.geoJSON(feature).getBounds();
     map.fitBounds(bounds, { maxZoom: 21 });
     map.setView(bounds.getCenter(), map.getZoom(), { animate: true });
-}
-
- 
-
+};
 
 const selectedFeaturesGet = () => {
     return _geojson.features;
 };
-const selectedFeaturesAddAll = (hiliteFeaure) => {
-    const colorStyle = { color: '#ffd000' ,weight: 3 };    
-    const hiliteStyle = { color: '#800080',weight: 4 };
+
+const colorStyle = { color: '#ffd000', weight: 3 };
+const hiliteStyle = { color: '#800080',weight: 4 };
+
+const selectedFeaturesUpdate = (hiliteFeaureId) => {
+
     _geojsonLayer(_geojson, {
         style: function (feature) {
-            if (hiliteFeaure && feature.feature.properties.id == hiliteFeaure.properties.id)              
-               return hiliteStyle;
+            if (hiliteFeaureId && feature.properties.id == hiliteFeaureId)
+                return hiliteStyle;
             return colorStyle;
         },
-        
-        onEachFeature: function (feature, layer)  {
-          if (feature.properties && feature.properties.id) {
-            layer.bindPopup(feature.properties.id);
-          }
+
+        onEachFeature: function (feature, layer) {
+            if (feature.properties && feature.properties.id) {
+                // Zoom til feature i stedet for at vise popup
+                layer.on('click', function () {
+                    zoomToFeature(feature);
+                    selectedFeatureId = feature.properties.id;
+                    selectedFeaturesHilite(selectedFeatureId);
+                    backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:updateSelected`, selectedFeatureId);
+                 });
+            }
         }
-      }).addTo(cloud.get().map);
+    }).addTo(cloud.get().map);
 };
 
-const setSelectedStyle = (hiliteFeaure) => {
-    const colorStyle = { color: '#ffd000' ,weight: 3 };    
-    const hiliteStyle = { color: '#800080',weight: 4 };
+const selectedFeaturesHilite = (hiliteFeaureId) => {
+    if (!hiliteFeaureId) 
+        return;
+
     for (let layerId in cloud.get().map._layers) {
         let layer = cloud.get().map._layers[layerId];
         if (layer instanceof L.GeoJSON) {
-            layer.setStyle(colorStyle);
-
-            layer.eachLayer(function(feature) {
-                if   (hiliteFeaure && feature.feature.properties.id == hiliteFeaure.properties.id)              
+                layer.eachLayer(function(feature) {
+                if   (hiliteFeaureId && feature.feature.properties.id == hiliteFeaureId) {
                     feature.setStyle(hiliteStyle);
-                else
-                    feature.setStyle(colorStyle);
+                }              
             });
         }
     }
-};
+}
+
 
 const _makeSearch = (wkt) => {
     try {
@@ -120,17 +118,19 @@ const _makeSearch = (wkt) => {
         if (!wkt || !fullLayerName) {
             return;
         }
-
-        sqlQuery.init(qstore, wkt, "4326", () => {
-            if (qstore.length >= 1 && qstore[0].geoJSON) {
-
-                for (const feature of qstore[0].geoJSON.features) {
-                    selectedFeaturesAdd(feature);
+        new Promise((resolve, reject) => {
+            sqlQuery.init(qstore, wkt, "4326", () => {
+                if (qstore.length >= 1 && qstore[0].geoJSON) {
+                    const promises = qstore[0].geoJSON.features.map(feature => selectedFeaturesAdd(feature));
+                    Promise.all(promises).then(resolve).catch(reject);
+                } else {
+                    resolve();
                 }
-                backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
-            }
-        }, null, null, null, [fullLayerName], true, null, null);
-        selectedFeaturesAddAll();
+            }, null, null, null, [fullLayerName], true, null, null);
+        }).then(() => {
+            selectedFeaturesUpdate(0);
+            backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
+        });
     } catch (e) {
         console.error("Error in _makeSearch:", e);
     }
@@ -172,7 +172,7 @@ module.exports = {
         const dict = {};
         const React = require('react');
         const ReactDOM = require('react-dom');
-        
+
 
         backboneEvents.get().on(`reset:all reset:${MAPSTATUS_MODULE_NAME}`, () => {
             _self.reset();
@@ -184,28 +184,31 @@ module.exports = {
         class MapStatus extends React.Component {
 
             constructor(props) {
-                super(props);   
+                super(props);
                 this.state = {
                     selectedRowIndex: -1
                 };
 
             }
-            
+
             componentDidMount() {
                 $('.bi-layout-text-window').on('click', function () { });
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:update`, () => {
                     this.forceUpdate(); // Trigger re-render når noget ændrer sig
-                    setSelectedStyle();
+                });
+                backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:updateSelected`, (selectedFeatureId) => {
+                    alert("selectedFeatureId: " + selectedFeatureId);
+                    //this.setState({ selectedRowIndex: selectedFeatureId });
                 });
             }
 
             componentDidUpdate(prevProps) { }
 
-            featureRowClick (feature, index ) {
+            featureRowClick(feature, index) {
                 this.setState({ selectedRowIndex: index });
-                zoomToFeature(feature); 
-                setSelectedStyle(feature); 
-             }
+                zoomToFeature(feature);
+                selectedFeaturesUpdate(feature.properties.id); // Opdaterer stilen for den valgte feature
+            }
 
             render() {
                 return (
@@ -215,9 +218,9 @@ module.exports = {
                             onClick={() => _self.active(true)}
                             className="btn btn-outline-secondary"
                         >Start</button>
-                        
+
                         <p>Antal: {selectedFeaturesLength()}</p>
-                        
+
                         <table className="table table-striped table-hover table-sm">
                             <thead>
                                 <tr>
@@ -230,12 +233,12 @@ module.exports = {
                             <tbody id="mapstatus-table">
                                 {selectedFeaturesGet().map((feature, index) => {
                                     return (
-                                        <tr 
-                                          onClick={ () => this.featureRowClick(feature, index)} key={index}
-                                          style={{ 
-                                            cursor: 'pointer', 
-                                            border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
-                                            fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
+                                        <tr
+                                            onClick={() => this.featureRowClick(feature, index)} key={index}
+                                            style={{
+                                                cursor: 'pointer',
+                                                border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
+                                                fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
                                             }}>
 
                                             <td>{feature.properties.id}</td>
@@ -260,7 +263,7 @@ module.exports = {
         }
 
     },
-    
+
     clickDraw() {
         _self.active(true);
     },
@@ -357,20 +360,8 @@ module.exports = {
         }
     },
     bindDrawEvents: () => {
-        cloud.get().map.on('preclick', (e) => {
-            alert("preclick i kort ");
-            
-        });
-        
-        cloud.get().map.on('click', function (e) {
-            alert("klik i kort ");
-            alert("antal: "+ selectedFeaturesLength());
-            selectedFeaturesAddAll();
-             
-        });
-
+   
         backboneEvents.get().trigger(`drawing:turnedOn`);
-
 
         cloud.get().map.on('draw:created', function (e) {
             _self.startShapeSearch(e);
@@ -394,7 +385,6 @@ module.exports = {
         if (drawControl) {
             return drawControl;
         }
-        // L.drawLocal = require('../../../browser/modules/drawLocales/draw.js');
         return new L.Control.Draw({
             position: 'topright',
             draw: {
@@ -428,10 +418,6 @@ module.exports = {
                 circlemarker: false,
 
             },
-            // edit: {
-            //     featureGroup: drawnItems,
-            //     remove: true
-            // }
         });
     },
     unbindEvents: () => {
