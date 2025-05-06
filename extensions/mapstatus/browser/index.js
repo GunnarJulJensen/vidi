@@ -177,14 +177,15 @@ module.exports = {
             constructor(props) {
                 super(props);
                 this.state = {
-                    selectedRowIndex: -1
+                    selectedRowIndex: -1,
+                    createProjectShow: false,
                 };
             }
             rowRefs = [];
             scrollToRow = () => {
-                const row = this.rowRefs[this.state.selectedRowIndex];  
+                const row = this.rowRefs[this.state.selectedRowIndex];
                 if (row) {
-                    row.scrollIntoView({ behavior: 'smooth', block: 'start' });     
+                    row.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }
 
@@ -203,32 +204,65 @@ module.exports = {
 
                 });
             }
-         
+
 
             componentDidUpdate(prevProps, prevState) {
+                if (!prevState.createProjectShow && this.state.createProjectShow) {
+                    const modal = new bootstrap.Modal(document.getElementById('createProjectModalId'));
+                    modal.show();
 
-             }
+                }
+                if (prevState.createProjectShow && !this.state.createProjectShow) {
+                    const modal = new bootstrap.Modal(document.getElementById('createProjectModalId'));
+                    modal.hide();
+                }
+            }
 
             featureRowClick(feature, index) {
-                
+
                 this.setState({ selectedRowIndex: index });
                 zoomToFeature(feature);
                 selectedFeaturesUpdate(feature.properties.id); // Opdaterer stilen for den valgte feature
             }
+            showCreateProjectModal = (show) => {
+                this.setState({ createProjectShow: show });
+            }
+
 
             render() {
                 return (
                     <div role="tabpanel">
+
                         <div className="form-select">
                             <p>Vælg projekt</p>
                             <select defaultValue="0" id="selectProject" onChange={() => _self.active(true)}>
                                 <option value="0">Vælg projekt</option>
                                 <option value="1">Projekt 1. Indre Odense</option>
                             </select>
-                            <button
-                                onClick={() => _self.active(true)}
-                                className="btn btn-outline-secondary"
-                            >Opret nyt projekt</button>
+                            <br />
+                            <br />
+                            <div>
+                                <button
+                                    onClick={() => {
+                                        this.showCreateProjectModal(true);
+                                        _self.active(true);
+                                    }}
+                                    // data-toggle="modal"
+                                    className="btn btn-primary text-nowrap"
+                                >Opret nyt projekt</button>
+                            </div>
+                            <br />
+                            <div>
+                                <button
+                                    onClick={() => {
+                                        alert("Hent data fra projekt");
+                                    }}
+                                    // data-toggle="modal"
+                                    className="btn btn-primary text-nowrap"
+                                >Hent data</button>
+                            </div>
+                        </div>
+
                         {selectedFeaturesLength() > 0 && (
                             <div style={styleObject.divContainer}>
                                 <h5>Valgte ledninger : {selectedFeaturesLength()} </h5>
@@ -284,6 +318,43 @@ module.exports = {
                                 </div>
                             </div>
                         )}
+                        {this.state.createProjectShow && (
+
+                            <div class="modal" id="createProjectModalId" role="dialog">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h4 class="modal-title">Opret nyt projekt</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Indtast projekt navn</p>
+                                            <input type="text" id="projectName" className="form-control" placeholder="Projekt navn" />
+                                            <p>Indtast projekt beskrivelse</p>
+                                            <textarea id="projectDescription" className="form-control" placeholder="Projekt beskrivelse"></textarea>
+                                            
+                                            {/*<p>Vælg projekt mappe</p> <select defaultValue="0" id="selectProjectFolder" className="form-select">
+                                                <option value="0">Vælg projekt mappe</option>
+                                                <option value="1">Projekt mappe 1</option>
+                                            </select> */}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-default"  
+                                            onClick={() => {
+                                                this.showCreateProjectModal(false);
+                                            }} 
+                                            data-dismiss="modal">Luk</button>
+                                            <button type="button" class="btn btn-default"  
+                                            onClick={() => {
+                                                this.showCreateProjectModal(false);
+                                            }} 
+                                            data-dismiss="modal">Gem</button>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        )}
                     </div>
                 );
             }
@@ -324,6 +395,7 @@ module.exports = {
             console.error(e);
         }
     },
+
 
     turnOnLayer: (layerId) => {
         if (!layerId) {
