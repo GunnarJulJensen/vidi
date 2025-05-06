@@ -10,9 +10,12 @@
  *
  * @type {*|exports|module.exports}
  */
-var cloud;
+
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
-import { convert as geojsonToWKT } from "terraformer-wkt-parser"
+import { convert as geojsonToWKT } from "terraformer-wkt-parser";
+import styleObject from "./style.js";
+// This element contains the styling for the module
+require("./style.js");
 
 let backboneEvents;
 let qstore = [];
@@ -21,28 +24,17 @@ const _geojson = {
     features: [],
 };
 const _geojsonLayer = L.geoJSON;
+let _self = false;
+var cloud;
 let drawControl = null;
 let meta;
 let sqlQuery;
-
-let _self = false;
-
-/**
- *
- * @type {*|exports|module.exports}
- */
 var layerTree = require("./../../../browser/modules/layerTree");
+let selectedFeatureId = 0;
 var switchLayer = require("./../../../browser/modules/switchLayer");
-var layers = require("./../../../browser/modules/layers");
-const { func } = require("prop-types");
-/**
- *
- * @type {*|exports|module.exports}
- */
 var utils;
 
 
-let selectedFeatureId = 0;
 const selectedFeaturesClear = () => {
     _geojson.features = [];
 };
@@ -187,7 +179,13 @@ module.exports = {
                 this.state = {
                     selectedRowIndex: -1
                 };
-
+            }
+            rowRefs = [];
+            scrollToRow = () => {
+                const row = this.rowRefs[this.state.selectedRowIndex];  
+                if (row) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'start' });     
+                }
             }
 
             componentDidMount() {
@@ -198,14 +196,21 @@ module.exports = {
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:updateSelected`, (selectedFeatureId) => {
                     const si = selectedFeaturesGet().findIndex(feature => feature.properties.id == selectedFeatureId);
                     this.state.selectedRowIndex = si;
+                    this.setState({ selectedRowIndex: si });
+                    this.scrollToRow();
+                    selectedFeaturesHilite(selectedFeatureId);
                     this.forceUpdate();
 
                 });
             }
+         
 
-            componentDidUpdate(prevProps) { }
+            componentDidUpdate(prevProps, prevState) {
+
+             }
 
             featureRowClick(feature, index) {
+                
                 this.setState({ selectedRowIndex: index });
                 zoomToFeature(feature);
                 selectedFeaturesUpdate(feature.properties.id); // Opdaterer stilen for den valgte feature
@@ -214,98 +219,69 @@ module.exports = {
             render() {
                 return (
                     <div role="tabpanel">
-                        <button
-                            onClick={() => _self.active(true)}
-                            className="btn btn-outline-secondary"
-                        >Start</button>
                         <div className="form-select">
                             <p>Vælg projekt</p>
-                            <select  id="selectProject" onChange={() => _self.active(true)}>
-                                <option selected value="0">Vælg projekt</option>
-                                {/* {selectedFeaturesGet().map((feature, index) => {
-                                    return (
-                                        <option
-                                            key={index}
-                                            value={feature.properties.id}
-                                            onClick={() => this.featureRowClick(feature, index)}
-                                            style={{
-                                                cursor: 'pointer',
-                                                border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
-                                                fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
-                                            }}>
-                                            {feature.properties.fra_brønd} - {feature.properties.til_brønd}
-                                        </option>
-                                    );
-                                })} */}
+                            <select defaultValue="0" id="selectProject" onChange={() => _self.active(true)}>
+                                <option value="0">Vælg projekt</option>
                                 <option value="1">Projekt 1. Indre Odense</option>
                             </select>
-                        </div>
+                            <button
+                                onClick={() => _self.active(true)}
+                                className="btn btn-outline-secondary"
+                            >Opret nyt projekt</button>
                         {selectedFeaturesLength() > 0 && (
-                            <div style={{
-                                bottom: '5px',
-                                left: '550px',
-                                right: '100px',
-                                maxHeight: '30vh',
-                                marginLeft: '10px',
-                                marginRight: '10px',
-                                position: 'fixed',
-                                padding: '5px',
-                                zIndex: 1000,
-                                backgroundColor: 'white',
-                            }}>
+                            <div style={styleObject.divContainer}>
                                 <h5>Valgte ledninger : {selectedFeaturesLength()} </h5>
-
-                                <table className="table table-striped table-hover table-sm">
-                                    <thead style={{
-                                        position: 'sticky',
-                                        top: 0,
-                                        backgroundColor: 'grey'
-                                    }}>
-                                        <tr>
-                                            <th scope="col">Opstr.</th>
-                                            <th scope="col">Nedstr.</th>
-                                            <th scope="col">System</th>
-                                            <th scope="col">Kategori</th>
-                                            <th scope="col">Materiale</th>
-                                            <th scope="col">Rør diameter</th>
-                                            <th scope="col">Længde</th>
-                                            <th scope="col">Fra kote</th>
-                                            <th scope="col">Til kote</th>
-                                            <th scope="col">Dybde</th>
-                                            <th scope="col">Fysisk indeks</th>
-                                            <th scope="col">Bemærkning</th>
-
-                                        </tr>
-                                    </thead>
-                                    <tbody style={{ overflowY: 'auto' }}>
-                                        {selectedFeaturesGet().map((feature, index) => {
-                                            return (
-                                                <tr
-                                                    onClick={() => this.featureRowClick(feature, index)} key={index}
-                                                    style={{
-                                                        cursor: 'pointer',
-                                                        border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
-                                                        fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
-                                                    }}>
-                                                    <td>{feature.properties.fra_brønd}</td>
-                                                    <td>{feature.properties.til_brønd}</td>
-                                                    <td>{feature.properties.system}</td>
-                                                    <td>{feature.properties.kategori}</td>
-                                                    <td>{feature.properties.materiale}</td>
-                                                    <td>{feature.properties.handelsmål}</td>
-                                                    <td>{feature.properties.længde}</td>
-                                                    <td>{feature.properties.fra_kote}</td>
-                                                    <td>{feature.properties.til_kote}</td>
-                                                    <td>MANGLER !</td>
-                                                    <td>{feature.properties.fysiskindeks}</td>
-                                                    <td>---</td>
-
-
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                <div>
+                                    <table id="featureLedningTableId" className="table table-striped table-hover table-sm" style={styleObject.tableStyle} >
+                                        <thead style={styleObject.theadStyle}>
+                                            <tr style={styleObject.rowStyle}>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Opstr.</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Nedstr.</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">System</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Kategori</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Materiale</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Rør diameter</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Længde</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Fra kote</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Til kote</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Dybde</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Fysisk indeks</th>
+                                                <th style={styleObject.cellStyleHeader} scope="col">Bemærkning</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody style={styleObject.tbodyStyle}>
+                                            {selectedFeaturesGet().map((feature, index) => {
+                                                return (
+                                                    <tr
+                                                        ref={(el) => this.rowRefs[index] = el}
+                                                        onClick={() => this.featureRowClick(feature, index)} key={index}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            display: 'table',
+                                                            width: '100%',
+                                                            tableLayout: 'fixed',
+                                                            border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
+                                                            fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
+                                                        }}>
+                                                        <td>{feature.properties.fra_brønd}</td>
+                                                        <td>{feature.properties.til_brønd}</td>
+                                                        <td>{feature.properties.system}</td>
+                                                        <td>{feature.properties.kategori}</td>
+                                                        <td>{feature.properties.materiale}</td>
+                                                        <td>{feature.properties.handelsmål}</td>
+                                                        <td>{feature.properties.længde}</td>
+                                                        <td>{feature.properties.fra_kote}</td>
+                                                        <td>{feature.properties.til_kote}</td>
+                                                        <td>MANGLER !</td>
+                                                        <td>{feature.properties.fysiskindeks}</td>
+                                                        <td>---</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
                     </div>
