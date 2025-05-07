@@ -1,19 +1,19 @@
 /*
- * @author     Martin Høgh <mh@mapcentia.com>
- * @copyright  2013-2025 MapCentia ApS
+ * @author     Gunnar Jul Jensen <gjj@geopartner.dk>
+ * @copyright  
  * @license    http://www.gnu.org/licenses/#AGPL  GNU AFFERO GENERAL PUBLIC LICENSE 3
  */
 
 'use strict';
 
-/**
- *
- * @type {*|exports|module.exports}
- */
 
-const MAPSTATUS_MODULE_NAME = `mapstatus`;
+
 import { convert as geojsonToWKT } from "terraformer-wkt-parser";
 import styleObject from "./style.js";
+import React from 'react';
+import { off } from "npm";
+
+const MAPSTATUS_MODULE_NAME = `mapstatus`;
 // This element contains the styling for the module
 require("./style.js");
 
@@ -161,7 +161,7 @@ module.exports = {
 
     init: function () {
         const dict = {};
-        const React = require('react');
+
         const ReactDOM = require('react-dom');
 
 
@@ -177,15 +177,44 @@ module.exports = {
             constructor(props) {
                 super(props);
                 this.state = {
-                    selectedRowIndex: -1,
                     createProjectShow: false,
+                    dragInfo: { x: 100, y: 100, offsetX: 0, offsetY: 0 },
+                    isDragging: false,
                     projectName: "",
                     projectDescription: "",
                     projects: ["Vælg projekt", "Projekt 1. Indre Odense", "Projekt 2. Indre Odense", "Projekt 3. Indre Odense"],
                     selectedProject: "Vælg projekt",
+                    selectedRowIndex: -1
                 };
+                this.boxRef = React.createRef();
             }
+
             rowRefs = [];
+
+            handleMouseDown = (e) => {
+                const box = this.boxRef.current.getBoundingClientRect();
+                this.state.isDragging = true;
+                this.state.dragInfo.offsetX = e.clientX - box.left;
+                this.state.dragInfo.offsetY = e.clientY - box.top;
+                window.addEventListener("mousemove", this.handleMouseMove);
+                window.addEventListener("mouseup", this.handleMouseUp);
+            }
+
+            handleMouseUp = () => {
+                this.state.isDragging = false;
+                window.removeEventListener("mousemove", this.handleMouseMove);
+                window.removeEventListener("mouseup", this.handleMouseUp);
+            }
+
+            handleMouseMove = (e) => {
+                if (!this.state.isDragging) return;
+
+                this.setState({
+                    x: e.clientX - this.state.dragInfo.offsetX,
+                    y: e.clientY - this.state.dragInfo.offsetY,
+                });
+            }
+
             scrollToRow = () => {
                 const row = this.rowRefs[this.state.selectedRowIndex];
                 if (row) {
@@ -236,11 +265,36 @@ module.exports = {
                 this.state.projectName = event.target.value;
                 this.forceUpdate();
             }
+        
 
             render() {
                 const { projectName } = this.state;
                 const isButtonEnabled = projectName.trim() !== "";
                 const { projects, selectedProject } = this.state;
+                const { x, y } = this.state;
+                const boxStyle = {
+                    position: "absolute",
+                    left: `${x}px`,
+                    top: `${y}px`,
+                    width: "100px",
+                    height: "100px",
+                    backgroundColor: "skyblue",
+                    cursor: "grab",
+                    userSelect: "none",
+                    backgroundColor: '#9bc0e0',
+                    bottom: '75px',
+                    left: '550px',
+                    maxHeight: '30vh',
+                    marginLeft: '10px',
+                    marginRight: '10px',
+                    position: 'fixed',
+                    padding: '5px',
+                    right: '75px',
+                    zIndex: 1000,
+                    borderCollapse: 'collapse',
+                    fontSize: '12px'
+                  };
+
                 return (
                     <div role="tabpanel">
                         <div className="form-select mb-3">
@@ -255,16 +309,16 @@ module.exports = {
                                 </select>
                             </div>
                         </div>
-                        <div className="form-select mb-3">
+                        <div className="form-select">
                             <p>Excel data</p>
                             <button
                                 onClick={() => {
-                                    alert("Download excel regneark med data for valgte ledninger");
+                                    alert("Download excel regneark med valgte ledninger");
                                 }}
-                                className="btn btn-primary text-nowrap mt-5"
+                                className="btn btn-primary text-nowrap"
                             >Hent data</button>
                         </div>
-                        <div className="form-select mb-3">
+                        <div className="input-group mb-3">
                             <p> Projekt oprettelse</p>
                             <div>
                                 <button
@@ -272,7 +326,6 @@ module.exports = {
                                         this.showCreateProjectModal(true);
                                         _self.active(true);
                                     }}
-                                    // data-toggle="modal"
                                     className="btn btn-primary text-nowrap"
                                 >Opret nyt projekt</button>
                             </div>
@@ -282,7 +335,7 @@ module.exports = {
                             {this.state.createProjectShow && (
                                 <div>
                                     <div >
-                                        <p>Indtast projekt navn</p>
+                                        {/* <p>Indtast projekt navn</p> */}
                                         <input
                                             type="text"
                                             placeholder="Projekt navn"
@@ -293,8 +346,8 @@ module.exports = {
 
                                     </div>
                                     <br />
-                                    <div className="modal-footer">
-                                        <p>Indtast projekt beskrivelse</p>
+                                    <div>
+                                        {/* <p>Indtast projekt beskrivelse</p> */}
                                         <textarea
                                             className="w-100"
                                             placeholder="Projekt beskrivelse">
@@ -328,24 +381,24 @@ module.exports = {
                         </div>
 
                         {selectedFeaturesLength() > 0 && (
-                            <div style={styleObject.divContainer}>
+                            <div ref={this.boxRef} style={boxStyle}>
                                 <h5>Valgte ledninger : {selectedFeaturesLength()} </h5>
                                 <div>
                                     <table id="featureLedningTableId" className="table table-striped table-hover table-sm" style={styleObject.tableStyle} >
                                         <thead style={styleObject.theadStyle}>
                                             <tr style={styleObject.rowStyle}>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Opstr.</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Nedstr.</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">System</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Kategori</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Materiale</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Rør diameter</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Længde</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Fra kote</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Til kote</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Dybde</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Fysisk indeks</th>
-                                                <th style={styleObject.cellStyleHeader} scope="col">Bemærkning</th>
+                                                <th style={styleObject.cellStyleHeader} >Opstr.</th>
+                                                <th style={styleObject.cellStyleHeader} >Nedstr.</th>
+                                                <th style={styleObject.cellStyleHeader} >System</th>
+                                                <th style={styleObject.cellStyleHeader} >Kategori</th>
+                                                <th style={styleObject.cellStyleHeader} >Materiale</th>
+                                                <th style={styleObject.cellStyleHeader} >Rør diameter</th>
+                                                <th style={styleObject.cellStyleHeader} >Længde</th>
+                                                <th style={styleObject.cellStyleHeader} >Fra kote</th>
+                                                <th style={styleObject.cellStyleHeader} >Til kote</th>
+                                                <th style={styleObject.cellStyleHeader} >Dybde</th>
+                                                <th style={styleObject.cellStyleHeader} >Fysisk indeks</th>
+                                                <th style={styleObject.cellStyleHeader} >Bemærkning</th>
                                             </tr>
                                         </thead>
                                         <tbody style={styleObject.tbodyStyle}>
