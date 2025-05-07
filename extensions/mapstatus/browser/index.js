@@ -179,6 +179,10 @@ module.exports = {
                 this.state = {
                     selectedRowIndex: -1,
                     createProjectShow: false,
+                    projectName: "",
+                    projectDescription: "",
+                    projects: ["Vælg projekt", "Projekt 1. Indre Odense", "Projekt 2. Indre Odense", "Projekt 3. Indre Odense"],
+                    selectedProject: "Vælg projekt",
                 };
             }
             rowRefs = [];
@@ -207,15 +211,7 @@ module.exports = {
 
 
             componentDidUpdate(prevProps, prevState) {
-                if (!prevState.createProjectShow && this.state.createProjectShow) {
-                    const modal = new bootstrap.Modal(document.getElementById('createProjectModalId'));
-                    modal.show();
 
-                }
-                if (prevState.createProjectShow && !this.state.createProjectShow) {
-                    const modal = new bootstrap.Modal(document.getElementById('createProjectModalId'));
-                    modal.hide();
-                }
             }
 
             featureRowClick(feature, index) {
@@ -227,20 +223,49 @@ module.exports = {
             showCreateProjectModal = (show) => {
                 this.setState({ createProjectShow: show });
             }
+            addProject = (projectName) => {
+                this.state.projects.push(projectName);
+                this.setState({ projectName: projectName });
+                this.state.projectName = projectName;
+                this.forceUpdate();
+                alert("Projekt oprettet: " + projectName);
 
+            }
+            handleProjectName = (event) => {
+                this.setState({ projectName: event.target.value });
+                this.state.projectName = event.target.value;
+                this.forceUpdate();
+            }
 
             render() {
+                const { projectName } = this.state;
+                const isButtonEnabled = projectName.trim() !== "";
+                const { projects, selectedProject } = this.state;
                 return (
                     <div role="tabpanel">
-
-                        <div className="form-select">
-                            <p>Vælg projekt</p>
-                            <select defaultValue="0" id="selectProject" onChange={() => _self.active(true)}>
-                                <option value="0">Vælg projekt</option>
-                                <option value="1">Projekt 1. Indre Odense</option>
-                            </select>
-                            <br />
-                            <br />
+                        <div className="form-select mb-3">
+                            <div className="m-2">
+                                <p>Vælg projekt</p>
+                                <select defaultValue="0" id="selectProject" onChange={() => _self.active(true)}>
+                                    {projects.map((option, index) => (
+                                        <option key={index} value={option}>
+                                            {option}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="form-select mb-3">
+                            <p>Excel data</p>
+                            <button
+                                onClick={() => {
+                                    alert("Download excel regneark med data for valgte ledninger");
+                                }}
+                                className="btn btn-primary text-nowrap mt-5"
+                            >Hent data</button>
+                        </div>
+                        <div className="form-select mb-3">
+                            <p> Projekt oprettelse</p>
                             <div>
                                 <button
                                     onClick={() => {
@@ -251,16 +276,55 @@ module.exports = {
                                     className="btn btn-primary text-nowrap"
                                 >Opret nyt projekt</button>
                             </div>
+
                             <br />
-                            <div>
-                                <button
-                                    onClick={() => {
-                                        alert("Hent data fra projekt");
-                                    }}
-                                    // data-toggle="modal"
-                                    className="btn btn-primary text-nowrap"
-                                >Hent data</button>
-                            </div>
+
+                            {this.state.createProjectShow && (
+                                <div>
+                                    <div >
+                                        <p>Indtast projekt navn</p>
+                                        <input
+                                            type="text"
+                                            placeholder="Projekt navn"
+                                            defaultValue={projectName}
+                                            className="w-100"
+                                            onChange={this.handleProjectName} />
+
+
+                                    </div>
+                                    <br />
+                                    <div className="modal-footer">
+                                        <p>Indtast projekt beskrivelse</p>
+                                        <textarea
+                                            className="w-100"
+                                            placeholder="Projekt beskrivelse">
+                                        </textarea>
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary text-nowrap me-5"
+
+                                            onClick={() => {
+                                                this.showCreateProjectModal(false);
+                                            }}
+                                        >Luk
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn btn-primary text-nowrap"
+                                            disabled={!isButtonEnabled}
+                                            onClick={() => {
+                                                this.showCreateProjectModal(false);
+                                                this.addProject(projectName);
+                                            }}
+                                        >Gem</button>
+                                    </div>
+
+
+                                </div>
+
+                            )}
                         </div>
 
                         {selectedFeaturesLength() > 0 && (
@@ -317,43 +381,6 @@ module.exports = {
                                     </table>
                                 </div>
                             </div>
-                        )}
-                        {this.state.createProjectShow && (
-
-                            <div class="modal" id="createProjectModalId" role="dialog">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h4 class="modal-title">Opret nyt projekt</h4>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Indtast projekt navn</p>
-                                            <input type="text" id="projectName" className="form-control" placeholder="Projekt navn" />
-                                            <p>Indtast projekt beskrivelse</p>
-                                            <textarea id="projectDescription" className="form-control" placeholder="Projekt beskrivelse"></textarea>
-                                            
-                                            {/*<p>Vælg projekt mappe</p> <select defaultValue="0" id="selectProjectFolder" className="form-select">
-                                                <option value="0">Vælg projekt mappe</option>
-                                                <option value="1">Projekt mappe 1</option>
-                                            </select> */}
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-default"  
-                                            onClick={() => {
-                                                this.showCreateProjectModal(false);
-                                            }} 
-                                            data-dismiss="modal">Luk</button>
-                                            <button type="button" class="btn btn-default"  
-                                            onClick={() => {
-                                                this.showCreateProjectModal(false);
-                                            }} 
-                                            data-dismiss="modal">Gem</button>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </div>
-
                         )}
                     </div>
                 );
