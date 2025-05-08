@@ -45,6 +45,12 @@ const selectedFeaturesAdd = (feature) => {
 const selectedFeaturesLength = () => {
     return _geojson.features.length;
 };
+const selectedFeaturesAddExtraProperties = () => {
+    _geojson.features.forEach(feature => {
+        feature.properties.isSelected = true;
+        feature.properties.bem = "...";
+    });
+}
 
 const zoomToFeature = (feature) => {
     const map = cloud.get().map;
@@ -61,6 +67,7 @@ const colorStyle = { color: '#ffd000', weight: 3 };
 const hiliteStyle = { color: '#800080', weight: 4 };
 
 const selectedFeaturesUpdate = (hiliteFeaureId) => {
+    selectedFeaturesAddExtraProperties();
     _geojsonLayer(_geojson, {
         style: function (feature) {
             if (hiliteFeaureId && feature.properties.id == hiliteFeaureId)
@@ -99,6 +106,16 @@ const selectedFeaturesHilite = (hiliteFeaureId) => {
         }
     }
 }
+
+const selectedFeaturesById   = (featureId) => {
+    const feature = _geojson.features.find(f => f.properties.id == featureId);
+    if (feature) {
+        return feature;
+    } else {
+        console.error("Feature not found with id: " + featureId);
+        return null;
+    }
+}    
 
 
 const _makeSearch = (wkt) => {
@@ -189,7 +206,10 @@ module.exports = {
                     projectDescription: "",
                     projects: ["Vælg projekt", "Projekt 1. Indre Odense", "Projekt 2. Indre Odense", "Projekt 3. Indre Odense"],
                     selectedProject: "Vælg projekt",
-                    selectedRowIndex: -1
+                    selectedRowIndex: -1,
+                    showModal: false,
+                    selectedFeatureId: 0,
+                    selectedFeature: {},
                 };
                 this.boxRef = React.createRef();
             }
@@ -197,7 +217,6 @@ module.exports = {
             rowRefs = [];
 
             handleMouseDown = (e) => {
-                //const box = this.boxRef.current.getBoundingClientRect();
                 const rect = this.boxRef.current.getBoundingClientRect();
                 this.setState({
                     isDragging: true,
@@ -287,7 +306,33 @@ module.exports = {
                 this.state.projectName = event.target.value;
                 this.forceUpdate();
             }
+            handleProjectBem = (event) => {
+                const bemark = event.target.value.trim();
+              
+                this.setState((prevState) => ({
+                  selectedFeature: {
+                    ...prevState.selectedFeature,
+                    properties: {
+                      ...prevState.selectedFeature.properties,
+                      bem: bemark,
+                    }
+                  }
+                }));
+              };
+              
 
+            handleCheckboxChange(index, e) {
+                e.stopPropagation();
+                _geojson.features[index].properties.isSelected = e.target.checked;
+            }
+
+            featureEdit(featureId) {
+                const feature = selectedFeaturesById(featureId);
+                if (!feature) {
+                    return;
+                }
+                this.setState({ showModal: true, selectedFeature: feature });
+            }
 
             render() {
                 const { projectName } = this.state;
@@ -339,12 +384,11 @@ module.exports = {
                                             placeholder="Projekt navn"
                                             defaultValue={projectName}
                                             className="w-100"
-                                            onChange={this.handleProjectName} 
+                                            onChange={this.handleProjectName}
                                         />
                                     </div>
                                     <br />
                                     <div>
-                                        {/* <p>Indtast projekt beskrivelse</p> */}
                                         <textarea
                                             className="w-100"
                                             placeholder="Projekt beskrivelse">
@@ -370,10 +414,7 @@ module.exports = {
                                             }}
                                         >Gem</button>
                                     </div>
-
-
                                 </div>
-
                             )}
                         </div>
 
@@ -388,18 +429,20 @@ module.exports = {
                                     <table id="featureLedningTableId" className="table table-striped table-hover table-sm" style={styleObject.tableStyle} >
                                         <thead style={styleObject.theadStyle}>
                                             <tr style={styleObject.rowStyle}>
-                                                <th style={styleObject.cellStyleHeader} >Opstr.</th>
-                                                <th style={styleObject.cellStyleHeader} >Nedstr.</th>
-                                                <th style={styleObject.cellStyleHeader} >System</th>
-                                                <th style={styleObject.cellStyleHeader} >Kategori</th>
-                                                <th style={styleObject.cellStyleHeader} >Materiale</th>
-                                                <th style={styleObject.cellStyleHeader} >Rør diameter</th>
-                                                <th style={styleObject.cellStyleHeader} >Længde</th>
-                                                <th style={styleObject.cellStyleHeader} >Fra kote</th>
-                                                <th style={styleObject.cellStyleHeader} >Til kote</th>
-                                                <th style={styleObject.cellStyleHeader} >Dybde</th>
-                                                <th style={styleObject.cellStyleHeader} >Fysisk indeks</th>
-                                                <th style={styleObject.cellStyleHeader} >Bemærkning</th>
+                                                <th style={{ width: '20px' }} ></th>
+                                                <th style={{ fontWeight: 'bold' }} >Opstr.</th>
+                                                <th style={{ fontWeight: 'bold' }}  >Nedstr.</th>
+                                                <th style={{ fontWeight: 'bold' }} >System</th>
+                                                <th style={{ fontWeight: 'bold' }}  >Kategori</th>
+                                                <th style={{ fontWeight: 'bold' }}  >Materiale</th>
+                                                <th style={{ fontWeight: 'bold' }}  >Rør diameter</th>
+                                                <th style={{ fontWeight: 'bold' }}  >Længde</th>
+                                                <th style={{ fontWeight: 'bold' }}  >Fra kote</th>
+                                                <th style={{ fontWeight: 'bold' }}  >Til kote</th>
+                                                <th style={{ fontWeight: 'bold' }}  >Dybde</th>
+                                                <th style={{ fontWeight: 'bold' }} >Fysisk indeks</th>
+                                                <th style={{ fontWeight: 'bold' }} >Bemærkning</th>
+                                                <th style={{ width: '20px' }} ></th>
                                             </tr>
                                         </thead>
                                         <tbody style={styleObject.tbodyStyle}>
@@ -416,6 +459,14 @@ module.exports = {
                                                             border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
                                                             fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
                                                         }}>
+                                                        <td style={{ width: '20px' }}>
+
+                                                            {<input
+                                                                type='checkbox'
+                                                                checked={feature.properties.isSelected}
+                                                                onChange={(e) => this.handleCheckboxChange(index, e)}
+                                                            />}
+                                                        </td>
                                                         <td>{feature.properties.fra_brønd}</td>
                                                         <td>{feature.properties.til_brønd}</td>
                                                         <td>{feature.properties.system}</td>
@@ -427,7 +478,20 @@ module.exports = {
                                                         <td>{feature.properties.til_kote}</td>
                                                         <td>MANGLER !</td>
                                                         <td>{feature.properties.fysiskindeks}</td>
-                                                        <td>---</td>
+                                                        <td>{feature.properties.bem}</td>
+                                                        <td
+                                                            style={{
+                                                                width: '20px',
+                                                                textAlign: 'center'
+                                                            }}>
+                                                            <i className="bi bi-pen"
+                                                                onClick={(e) => {
+                                                                    // e.stopPropagation(); // Prevent row click event
+                                                                    this.featureEdit(feature.properties.id);
+
+                                                                }}
+                                                            />
+                                                        </td>
                                                     </tr>
                                                 );
                                             })}
@@ -436,7 +500,24 @@ module.exports = {
                                 </div>
                             </div>
                         )}
+                        {this.state.showModal && (
+                            <div style={styleObject.modalOverlay} onClick={() => this.setState({ showModal: false })}>
+                                <div style={styleObject.modalContent} onClick={(e) => e.stopPropagation()}>
+                                    <h3>Feature Info</h3>
+                                    <p><strong>Opstrøms brønd:</strong> {this.state.selectedFeature.properties.fra_brønd}</p>
+                                    <p><strong>Nedstrøms brønd:</strong> {this.state.selectedFeature.properties.til_brønd}</p>  
+                                    <textarea
+                                            onChange={(e) => this.handleProjectBem( e)}
+                                            value={this.state.selectedFeature.properties.bem}
+                                            className="w-100"
+                                            placeholder="Opgave beskrivelse">
+                                        </textarea>
+                                    <button onClick={() => this.setState({ showModal: false })}>Luk</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
+
                 );
             }
 
@@ -549,8 +630,7 @@ module.exports = {
             backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`)
         });
         cloud.get().map.on('draw:drawstart', function () {
-            // Clear all SQL query layers
-            // backboneEvents.get().trigger("sqlQuery:clear");
+
         });
         cloud.get().map.on('draw:drawstop', function (e) {
 
