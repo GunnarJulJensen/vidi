@@ -1,25 +1,31 @@
+const height = require("../../../browser/modules/height");
+
 const styleObject = {
-    divContainer: {
+
+    boxStyle: {
         backgroundColor: '#9bc0e0',
-        bottom: '75px',
-        left: '550px',
-        maxHeight: '30vh',
+        bottom: '10px',
+        cursor: 'grab',
+        fontSize: '12px',
+        height: 'auto',
+        inset: 'unset',
         marginLeft: '10px',
         marginRight: '10px',
-        position: 'fixed',
+        maxHeight: '500px',
         padding: '5px',
+        position: 'fixed',
         right: '75px',
-        zIndex: 1000,
-        borderCollapse: 'collapse',
-        fontSize: '12px'
+        resize: 'both',
+        width: '70vw',
+        zIndex: 10200
     },
 
     tableContainer: {
         display: 'block',
         textAlign: 'center',
     },
-    
-    tableHeader: {    
+
+    tableHeader: {
         position: 'sticky',
         top: 0,
         fontSize: '1.2em',
@@ -39,13 +45,13 @@ const styleObject = {
         display: 'table',
         width: '100%',
         tableLayout: 'fixed'
-    }, 
+    },
     tableStyle: {
         width: '100%',
         borderCollapse: 'collapse',
         tableLayout: 'fixed',
     },
-    
+
     theadStyle: {
         display: 'table',
         width: '100%',
@@ -55,21 +61,21 @@ const styleObject = {
         backgroundColor: '#f2f2f2',
         zIndex: 2,
     },
-    
+
     tbodyStyle: {
         display: 'block',
         maxHeight: '300px',
         overflowY: 'auto',
         width: '100%',
     },
-    
-    rowStyle:  {
+
+    rowStyle: {
         display: 'table',
         width: '100%',
         tableLayout: 'fixed',
         fontWeight: 'bold !important',
     },
-    
+
     cellStyleHeader: {
         fontWeight: 'bold !important',
     },
@@ -86,6 +92,6 @@ const styleObject = {
         // borderRadius: '8px',
         // boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
     },
-    
-};    
+
+};
 module.exports = styleObject;

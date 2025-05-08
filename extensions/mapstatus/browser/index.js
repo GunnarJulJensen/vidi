@@ -11,7 +11,7 @@
 import { convert as geojsonToWKT } from "terraformer-wkt-parser";
 import styleObject from "./style.js";
 import React from 'react';
-import { off } from "npm";
+
 
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
 // This element contains the styling for the module
@@ -178,7 +178,12 @@ module.exports = {
                 super(props);
                 this.state = {
                     createProjectShow: false,
-                    dragInfo: { x: 100, y: 100, offsetX: 0, offsetY: 0 },
+                    dragInfo: {
+                        x: 100,
+                        y: 100,
+                        offsetX: 0,
+                        offsetY: 0
+                    },
                     isDragging: false,
                     projectName: "",
                     projectDescription: "",
@@ -192,16 +197,25 @@ module.exports = {
             rowRefs = [];
 
             handleMouseDown = (e) => {
-                const box = this.boxRef.current.getBoundingClientRect();
-                this.state.isDragging = true;
-                this.state.dragInfo.offsetX = e.clientX - box.left;
-                this.state.dragInfo.offsetY = e.clientY - box.top;
+                //const box = this.boxRef.current.getBoundingClientRect();
+                const rect = this.boxRef.current.getBoundingClientRect();
+                this.setState({
+                    isDragging: true,
+                    dragInfo: {
+                        ...this.state.dragInfo,
+                        offsetX: e.clientX - rect.left,
+                        offsetY: e.clientY - rect.top,
+                        x: rect.left,
+                        y: rect.top
+                    }
+
+                });
                 window.addEventListener("mousemove", this.handleMouseMove);
                 window.addEventListener("mouseup", this.handleMouseUp);
             }
 
             handleMouseUp = () => {
-                this.state.isDragging = false;
+                this.setState({ isDragging: false });
                 window.removeEventListener("mousemove", this.handleMouseMove);
                 window.removeEventListener("mouseup", this.handleMouseUp);
             }
@@ -210,9 +224,17 @@ module.exports = {
                 if (!this.state.isDragging) return;
 
                 this.setState({
-                    x: e.clientX - this.state.dragInfo.offsetX,
-                    y: e.clientY - this.state.dragInfo.offsetY,
+                    dragInfo: {
+                        ...this.state.dragInfo,
+                        x: e.clientX - this.state.dragInfo.offsetX,
+                        y: e.clientY - this.state.dragInfo.offsetY
+                    }
                 });
+                if (this.boxRef.current) {
+                    this.boxRef.current.style.position = 'absolute';
+                    this.boxRef.current.style.left = `${this.state.dragInfo.x}px`;
+                    this.boxRef.current.style.top = `${this.state.dragInfo.y}px`;
+                }
             }
 
             scrollToRow = () => {
@@ -265,39 +287,16 @@ module.exports = {
                 this.state.projectName = event.target.value;
                 this.forceUpdate();
             }
-        
+
 
             render() {
                 const { projectName } = this.state;
                 const isButtonEnabled = projectName.trim() !== "";
                 const { projects, selectedProject } = this.state;
-                const { x, y } = this.state;
-                const boxStyle = {
-                    position: "absolute",
-                    left: `${x}px`,
-                    top: `${y}px`,
-                    width: "100px",
-                    height: "100px",
-                    backgroundColor: "skyblue",
-                    cursor: "grab",
-                    userSelect: "none",
-                    backgroundColor: '#9bc0e0',
-                    bottom: '75px',
-                    left: '550px',
-                    maxHeight: '30vh',
-                    marginLeft: '10px',
-                    marginRight: '10px',
-                    position: 'fixed',
-                    padding: '5px',
-                    right: '75px',
-                    zIndex: 1000,
-                    borderCollapse: 'collapse',
-                    fontSize: '12px'
-                  };
 
                 return (
                     <div role="tabpanel">
-                        <div className="form-select mb-3">
+                        <div className="form-select mb-3" style={{ '--bsFormSelectBgImg': 'none' }}>
                             <div className="m-2">
                                 <p>Vælg projekt</p>
                                 <select defaultValue="0" id="selectProject" onChange={() => _self.active(true)}>
@@ -309,7 +308,7 @@ module.exports = {
                                 </select>
                             </div>
                         </div>
-                        <div className="form-select">
+                        <div className="form-select mb-3" style={{ '--bsFormSelectBgImg': 'none' }}>
                             <p>Excel data</p>
                             <button
                                 onClick={() => {
@@ -318,7 +317,7 @@ module.exports = {
                                 className="btn btn-primary text-nowrap"
                             >Hent data</button>
                         </div>
-                        <div className="input-group mb-3">
+                        <div className="form-select" style={{ '--bsFormSelectBgImg': 'none' }}>
                             <p> Projekt oprettelse</p>
                             <div>
                                 <button
@@ -335,15 +334,13 @@ module.exports = {
                             {this.state.createProjectShow && (
                                 <div>
                                     <div >
-                                        {/* <p>Indtast projekt navn</p> */}
                                         <input
                                             type="text"
                                             placeholder="Projekt navn"
                                             defaultValue={projectName}
                                             className="w-100"
-                                            onChange={this.handleProjectName} />
-
-
+                                            onChange={this.handleProjectName} 
+                                        />
                                     </div>
                                     <br />
                                     <div>
@@ -381,8 +378,12 @@ module.exports = {
                         </div>
 
                         {selectedFeaturesLength() > 0 && (
-                            <div ref={this.boxRef} style={boxStyle}>
-                                <h5>Valgte ledninger : {selectedFeaturesLength()} </h5>
+                            <div
+                                style={styleObject.boxStyle}
+                                ref={this.boxRef}>
+                                <div onMouseDown={this.handleMouseDown}>
+                                    <h5>Valgte ledninger : {selectedFeaturesLength()} </h5>
+                                </div>
                                 <div>
                                     <table id="featureLedningTableId" className="table table-striped table-hover table-sm" style={styleObject.tableStyle} >
                                         <thead style={styleObject.theadStyle}>
@@ -506,14 +507,6 @@ module.exports = {
             return '';
         }
     },
-    getState: () => {
-
-        return {};
-    },
-    recreateDrawnings: (parr, clear) => {
-        alert("recreateDrawnings " + JSON.stringify(parr));
-    },
-
 
     startDrawControl: (enable) => {
         _self.bindDrawEvents();
