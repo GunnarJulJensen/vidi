@@ -82,8 +82,8 @@ const selectedFeaturesGet = () => {
     return _geojson.features;
 };
 
-const colorStyle = { color: '#ffd000', weight: 3 };
-const hiliteStyle = { color: '#800080', weight: 4 };
+const colorStyle = { color: '#ffd000', weight: 12,  'opacity': 0.25 };
+const hiliteStyle = { color: '#800080', weight: 20, 'opacity': 0.25 };
 
 const selectedFeaturesUpdate = (hiliteFeaureId) => {
     selectedFeaturesAddExtraProperties();
@@ -266,6 +266,9 @@ module.exports = {
 
             handleMouseMove = (e) => {
                 if (!this.state.isDragging) return;
+
+                if (e.clientX < 0 || e.clientY < 40) return;
+                if (e.clientX > window.innerWidth || e.clientY > window.innerHeight) return;
 
                 this.setState({
                     dragInfo: {
