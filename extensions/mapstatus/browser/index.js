@@ -23,7 +23,7 @@ const _geojson = {
     type: "FeatureCollection",
     features: [],
 };
-const _geojsonLayer = L.geoJSON;
+let _geojsonLayer = null;
 let _self = false;
 var cloud;
 let drawControl = null;
@@ -36,7 +36,15 @@ var utils;
 
 
 const selectedFeaturesClear = () => {
-    _geojson.features = [];
+    try {
+        if (_geojsonLayer && _geojsonLayer.clearLayers) {
+            _geojsonLayer.clearLayers();
+        }
+        _geojson.features = [];
+    }
+    catch (e) {
+        console.log("Error in selectedFeaturesClear: " + e);
+    }
 };
 const selectedFeaturesAdd = (feature) => {
     _geojson.features.push(feature);
@@ -48,16 +56,16 @@ const selectedFeaturesLength = () => {
 const selectedFeaturesAddExtraProperties = () => {
     if (!_geojson.features || _geojson.features.length == 0) {
         return;
-    }    
+    }
     if (_geojson.features[0].properties.hasOwnProperty("isSelected")) {
         return;
-    }   
+    }
     _geojson.features.forEach(feature => {
 
-        if( !feature.properties.hasOwnProperty("isSelected")) {
-            feature.properties.isSelected = true;    
+        if (!feature.properties.hasOwnProperty("isSelected")) {
+            feature.properties.isSelected = true;
         }
-        if( !feature.properties.hasOwnProperty("bem")) {
+        if (!feature.properties.hasOwnProperty("bem")) {
             feature.properties.bem = "...";
         }
     });
@@ -79,7 +87,7 @@ const hiliteStyle = { color: '#800080', weight: 4 };
 
 const selectedFeaturesUpdate = (hiliteFeaureId) => {
     selectedFeaturesAddExtraProperties();
-    _geojsonLayer(_geojson, {
+    _geojsonLayer = L.geoJSON(_geojson, {
         style: function (feature) {
             if (hiliteFeaureId && feature.properties.id == hiliteFeaureId)
                 return hiliteStyle;
@@ -129,10 +137,10 @@ const selectedFeaturesById = (featureId) => {
 }
 
 const selectedFeatureUpdate = (featureId, propertyName, value) => {
-    const feature = selectedFeaturesById(featureId);    
-    if (feature && feature.properties.hasOwnProperty(propertyName))  {
+    const feature = selectedFeaturesById(featureId);
+    if (feature && feature.properties.hasOwnProperty(propertyName)) {
         feature.properties[propertyName] = value;
-    } 
+    }
 }
 
 
@@ -140,7 +148,6 @@ const _makeSearch = (wkt) => {
     try {
         const fullLayerName = _self.fullLayerName("ledning_drift");
         selectedFeaturesClear();
-        alert("Opdatere: " + fullLayerName);
 
         if (!wkt || !fullLayerName) {
             return;
@@ -328,27 +335,27 @@ module.exports = {
                 const bemark = event.target.value;
                 const editFeature = JSON.parse(JSON.stringify(this.state.selectedFeature));
                 editFeature.properties.bem = bemark;
-                this.setState({ selectedFeature: editFeature });             
+                this.setState({ selectedFeature: editFeature });
             };
 
             handleProjectGem = (e) => {
                 const featureId = this.state.selectedFeature.properties.id;
                 const bemark = this.state.selectedFeature.properties.bem.trim();
-                
+
                 if (featureId) {
-                    selectedFeatureUpdate (featureId, "bem", bemark); 
+                    selectedFeatureUpdate(featureId, "bem", bemark);
                     backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
                 } else {
                     console.error("Feature not found with id: " + featureId);
-                }                
+                }
                 this.setState({ showModal: false })
-            };     
+            };
 
 
             handleCheckboxChange(index, e) {
                 e.stopPropagation();
                 //  _geojson må ikke stå her. Hele objekter skal sepereres i stedet for at ændre på det eksisterende objekt.
-                selectedFeatureUpdate (_geojson.features[index].properties.id, "isSelected", e.target.checked);     
+                selectedFeatureUpdate(_geojson.features[index].properties.id, "isSelected", e.target.checked);
             }
 
             featureEdit(featureId) {
