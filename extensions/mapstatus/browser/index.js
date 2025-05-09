@@ -6,148 +6,37 @@
 
 'use strict';
 
-
-
 import { convert as geojsonToWKT } from "terraformer-wkt-parser";
 import styleObject from "./style.js";
 import React from 'react';
-
+import SelectedFeaturesManager from './selectedFeatures.js' ;
 
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
-// This element contains the styling for the module
+
 require("./style.js");
 
 let backboneEvents;
 let qstore = [];
-const _geojson = {
-    type: "FeatureCollection",
-    features: [],
-};
-let _geojsonLayer = null;
+
 let _self = false;
 var cloud;
 let drawControl = null;
+let featuresManager = null;
 let meta;
 let sqlQuery;
 var layerTree = require("./../../../browser/modules/layerTree");
-let selectedFeatureId = 0;
+
 var switchLayer = require("./../../../browser/modules/switchLayer");
 var utils;
 
 
-const selectedFeaturesClear = () => {
-    try {
-        if (_geojsonLayer && _geojsonLayer.clearLayers) {
-            _geojsonLayer.clearLayers();
-        }
-        _geojson.features = [];
-    }
-    catch (e) {
-        console.log("Error in selectedFeaturesClear: " + e);
-    }
-};
-const selectedFeaturesAdd = (feature) => {
-    _geojson.features.push(feature);
-};
-
-const selectedFeaturesLength = () => {
-    return _geojson.features.length;
-};
-const selectedFeaturesAddExtraProperties = () => {
-    if (!_geojson.features || _geojson.features.length == 0) {
-        return;
-    }
-    if (_geojson.features[0].properties.hasOwnProperty("isSelected")) {
-        return;
-    }
-    _geojson.features.forEach(feature => {
-
-        if (!feature.properties.hasOwnProperty("isSelected")) {
-            feature.properties.isSelected = true;
-        }
-        if (!feature.properties.hasOwnProperty("bem")) {
-            feature.properties.bem = "...";
-        }
-    });
-}
-
-const zoomToFeature = (feature) => {
-    const map = cloud.get().map;
-    const bounds = L.geoJSON(feature).getBounds();
-    map.fitBounds(bounds, { maxZoom: 21 });
-    map.setView(bounds.getCenter(), map.getZoom(), { animate: true });
-};
-
-const selectedFeaturesGet = () => {
-    return _geojson.features;
-};
-
-const colorStyle = { color: '#ffd000', weight: 12,  'opacity': 0.25 };
-const hiliteStyle = { color: '#800080', weight: 20, 'opacity': 0.25 };
-
-const selectedFeaturesUpdate = (hiliteFeaureId) => {
-    selectedFeaturesAddExtraProperties();
-    _geojsonLayer = L.geoJSON(_geojson, {
-        style: function (feature) {
-            if (hiliteFeaureId && feature.properties.id == hiliteFeaureId)
-                return hiliteStyle;
-            return colorStyle;
-        },
-
-        onEachFeature: function (feature, layer) {
-            if (feature.properties && feature.properties.id) {
-                // Zoom til feature i stedet for at vise popup
-                layer.on('click', function () {
-                    zoomToFeature(feature);
-                    selectedFeatureId = feature.properties.id;
-                    selectedFeaturesHilite(selectedFeatureId);
-                    backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:updateSelected`, selectedFeatureId);
-                });
-            }
-        }
-    }).addTo(cloud.get().map);
-};
-
-const selectedFeaturesHilite = (hiliteFeaureId) => {
-    if (!hiliteFeaureId)
-        return;
-
-    for (let layerId in cloud.get().map._layers) {
-        let layer = cloud.get().map._layers[layerId];
-        if (layer instanceof L.GeoJSON) {
-            layer.eachLayer(function (feature) {
-                if (hiliteFeaureId && feature.feature.properties.id == hiliteFeaureId) {
-                    feature.setStyle(hiliteStyle);
-                } else {
-                    feature.setStyle(colorStyle);
-                }
-            });
-        }
-    }
-}
-
-const selectedFeaturesById = (featureId) => {
-    const feature = _geojson.features.find(f => f.properties.id == featureId);
-    if (feature) {
-        return feature;
-    } else {
-        console.error("Feature not found with id: " + featureId);
-        return null;
-    }
-}
-
-const selectedFeatureUpdate = (featureId, propertyName, value) => {
-    const feature = selectedFeaturesById(featureId);
-    if (feature && feature.properties.hasOwnProperty(propertyName)) {
-        feature.properties[propertyName] = value;
-    }
-}
+ 
 
 
 const _makeSearch = (wkt) => {
     try {
         const fullLayerName = _self.fullLayerName("ledning_drift");
-        selectedFeaturesClear();
+        featuresManager?.clear();
 
         if (!wkt || !fullLayerName) {
             return;
@@ -155,14 +44,17 @@ const _makeSearch = (wkt) => {
         new Promise((resolve, reject) => {
             sqlQuery.init(qstore, wkt, "4326", () => {
                 if (qstore.length >= 1 && qstore[0].geoJSON) {
-                    const promises = qstore[0].geoJSON.features.map(feature => selectedFeaturesAdd(feature));
+                    const promises = qstore[0].geoJSON.features.map(
+                        feature => 
+                            featuresManager?.addFeature(feature)
+                    );
                     Promise.all(promises).then(resolve).catch(reject);
                 } else {
                     resolve();
                 }
             }, null, null, null, [fullLayerName], true, null, null);
         }).then(() => {
-            selectedFeaturesUpdate(0);
+            featuresManager?.updateFeature(0);
             backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
         });
     } catch (e) {
@@ -213,6 +105,7 @@ module.exports = {
 
         utils.createMainTab(exId, utils.__("MapStatus", dict), utils.__("Info", dict), require('./../../../browser/modules/height')().max, "bi bi-layout-text-window");
 
+        featuresManager = new SelectedFeaturesManager(cloud.get().map, backboneEvents, MAPSTATUS_MODULE_NAME);
 
         class MapStatus extends React.Component {
 
@@ -297,7 +190,9 @@ module.exports = {
                     this.forceUpdate();
                 });
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:updateSelected`, (selectedFeatureId) => {
-                    const si = selectedFeaturesGet().findIndex(feature => feature.properties.id == selectedFeatureId);
+                    if (!selectedFeatureId) 
+                        return;
+                    const si = featuresManager.getFeatures().findIndex(feature => feature.properties.id == selectedFeatureId);
                     this.state.selectedRowIndex = si;
                     this.setState({ selectedRowIndex: si });
                     this.scrollToRow();
@@ -313,10 +208,10 @@ module.exports = {
             }
 
             featureRowClick(feature, index) {
-
                 this.setState({ selectedRowIndex: index });
-                zoomToFeature(feature);
-                selectedFeaturesUpdate(feature.properties.id); // Opdaterer stilen for den valgte feature
+                this.setState({ selectedFeatureId: feature.properties.id });
+                featuresManager?.zoomToFeature(feature);
+                featuresManager?.updateFeature(feature.properties.id); // Opdaterer stilen for den valgte feature
             }
             showCreateProjectModal = (show) => {
                 this.setState({ createProjectShow: show });
@@ -346,7 +241,7 @@ module.exports = {
                 const bemark = this.state.selectedFeature.properties.bem.trim();
 
                 if (featureId) {
-                    selectedFeatureUpdate(featureId, "bem", bemark);
+                    featuresManager?.updateFeatureProperty (featureId, "bem", bemark); // selectedFeatureUpdate(featureId, "bem", bemark);
                     backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
                 } else {
                     console.error("Feature not found with id: " + featureId);
@@ -355,18 +250,22 @@ module.exports = {
             };
 
 
-            handleCheckboxChange(index, e) {
+            handleCheckboxChange(featureId, e) {
                 e.stopPropagation();
-                //  _geojson må ikke stå her. Hele objekter skal sepereres i stedet for at ændre på det eksisterende objekt.
-                selectedFeatureUpdate(_geojson.features[index].properties.id, "isSelected", e.target.checked);
+                this.setState({ selectedFeatureId: featureId });
+                featuresManager?.updateFeatureProperty (featureId,  "isSelected", e.target.checked); 
+                selectedFeatureUpdate(featuresManager.getFeatures()[index].properties.id, "isSelected", e.target.checked);
             }
 
             featureEdit(featureId) {
-                const feature = selectedFeaturesById(featureId);
+                const feature = featuresManager.byId(featureId);
                 if (!feature) {
                     return;
                 }
-                this.setState({ showModal: true, selectedFeature: feature });
+                this.setState({ 
+                    showModal: true, 
+                    selectedFeature: feature
+                });
             }
 
             render() {
@@ -453,15 +352,15 @@ module.exports = {
                             )}
                         </div>
 
-                        {selectedFeaturesLength() > 0 && (
+                        {featuresManager && featuresManager.length() > 0 && (
                             <div
                                 style={styleObject.boxStyle}
                                 ref={this.boxRef}>
                                 <div onMouseDown={this.handleMouseDown}>
-                                    <h5>Valgte ledninger : {selectedFeaturesLength()} </h5>
+                                    <h5>Valgte ledninger : { featuresManager.length()} </h5>
                                 </div>
                                 <div>
-                                    <table id="featureLedningTableId" className="table table-striped table-hover table-sm" style={styleObject.tableStyle} >
+                                    <table className="table table-striped table-hover table-sm" style={styleObject.tableStyle} >
                                         <thead style={styleObject.theadStyle}>
                                             <tr style={styleObject.rowStyle}>
                                                 <th style={{ width: '20px' }} ></th>
@@ -481,7 +380,7 @@ module.exports = {
                                             </tr>
                                         </thead>
                                         <tbody style={styleObject.tbodyStyle}>
-                                            {selectedFeaturesGet().map((feature, index) => {
+                                            { featuresManager.getFeatures().map((feature, index) => {
                                                 return (
                                                     <tr
                                                         ref={(el) => this.rowRefs[index] = el}
@@ -499,7 +398,7 @@ module.exports = {
                                                             {<input
                                                                 type='checkbox'
                                                                 checked={feature.properties.isSelected}
-                                                                onChange={(e) => this.handleCheckboxChange(index, e)}
+                                                                onChange={(e) => this.handleCheckboxChange(feature.properties.id, e)}
                                                             />}
                                                         </td>
                                                         <td style={styleObject.cellStyleLongText} >{feature.properties.fra_brønd}</td>
@@ -556,7 +455,6 @@ module.exports = {
 
                 );
             }
-
         }
 
         try {
@@ -569,9 +467,6 @@ module.exports = {
 
     },
 
-    clickDraw() {
-        _self.active(true);
-    },
     off: () => {
         if (drawControl) {
             cloud.get().map.removeControl(drawControl);
@@ -665,18 +560,11 @@ module.exports = {
             _self.startShapeSearch(e);
             backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`)
         });
-        cloud.get().map.on('draw:drawstart', function () {
-
-        });
-        cloud.get().map.on('draw:drawstop', function (e) {
-
-        });
+        
         cloud.get().map.on('draw:editstop', function (e) {
             _self.startShapeSearch(e);
         });
-        cloud.get().map.on('draw:editstart', function () {
-            // bufferItems.clearLayers();
-        });
+
     },
     createDrawControl: () => {
         if (drawControl) {
