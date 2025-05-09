@@ -46,9 +46,20 @@ const selectedFeaturesLength = () => {
     return _geojson.features.length;
 };
 const selectedFeaturesAddExtraProperties = () => {
+    if (!_geojson.features || _geojson.features.length == 0) {
+        return;
+    }    
+    if (_geojson.features[0].properties.hasOwnProperty("isSelected")) {
+        return;
+    }   
     _geojson.features.forEach(feature => {
-        feature.properties.isSelected = true;
-        feature.properties.bem = "...";
+
+        if( !feature.properties.hasOwnProperty("isSelected")) {
+            feature.properties.isSelected = true;    
+        }
+        if( !feature.properties.hasOwnProperty("bem")) {
+            feature.properties.bem = "...";
+        }
     });
 }
 
@@ -107,7 +118,7 @@ const selectedFeaturesHilite = (hiliteFeaureId) => {
     }
 }
 
-const selectedFeaturesById   = (featureId) => {
+const selectedFeaturesById = (featureId) => {
     const feature = _geojson.features.find(f => f.properties.id == featureId);
     if (feature) {
         return feature;
@@ -115,13 +126,21 @@ const selectedFeaturesById   = (featureId) => {
         console.error("Feature not found with id: " + featureId);
         return null;
     }
-}    
+}
+
+const selectedFeatureUpdate = (featureId, propertyName, value) => {
+    const feature = selectedFeaturesById(featureId);    
+    if (feature && feature.properties.hasOwnProperty(propertyName))  {
+        feature.properties[propertyName] = value;
+    } 
+}
 
 
 const _makeSearch = (wkt) => {
     try {
         const fullLayerName = _self.fullLayerName("ledning_drift");
         selectedFeaturesClear();
+        alert("Opdatere: " + fullLayerName);
 
         if (!wkt || !fullLayerName) {
             return;
@@ -180,7 +199,6 @@ module.exports = {
         const dict = {};
 
         const ReactDOM = require('react-dom');
-
 
         backboneEvents.get().on(`reset:all reset:${MAPSTATUS_MODULE_NAME}`, () => {
             _self.reset();
@@ -307,23 +325,30 @@ module.exports = {
                 this.forceUpdate();
             }
             handleProjectBem = (event) => {
-                const bemark = event.target.value.trim();
-              
-                this.setState((prevState) => ({
-                  selectedFeature: {
-                    ...prevState.selectedFeature,
-                    properties: {
-                      ...prevState.selectedFeature.properties,
-                      bem: bemark,
-                    }
-                  }
-                }));
-              };
-              
+                const bemark = event.target.value;
+                const editFeature = JSON.parse(JSON.stringify(this.state.selectedFeature));
+                editFeature.properties.bem = bemark;
+                this.setState({ selectedFeature: editFeature });             
+            };
+
+            handleProjectGem = (e) => {
+                const featureId = this.state.selectedFeature.properties.id;
+                const bemark = this.state.selectedFeature.properties.bem.trim();
+                
+                if (featureId) {
+                    selectedFeatureUpdate (featureId, "bem", bemark); 
+                    backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
+                } else {
+                    console.error("Feature not found with id: " + featureId);
+                }                
+                this.setState({ showModal: false })
+            };     
+
 
             handleCheckboxChange(index, e) {
                 e.stopPropagation();
-                _geojson.features[index].properties.isSelected = e.target.checked;
+                //  _geojson må ikke stå her. Hele objekter skal sepereres i stedet for at ændre på det eksisterende objekt.
+                selectedFeatureUpdate (_geojson.features[index].properties.id, "isSelected", e.target.checked);     
             }
 
             featureEdit(featureId) {
@@ -467,8 +492,8 @@ module.exports = {
                                                                 onChange={(e) => this.handleCheckboxChange(index, e)}
                                                             />}
                                                         </td>
-                                                        <td>{feature.properties.fra_brønd}</td>
-                                                        <td>{feature.properties.til_brønd}</td>
+                                                        <td style={styleObject.cellStyleLongText} >{feature.properties.fra_brønd}</td>
+                                                        <td style={styleObject.cellStyleLongText}>{feature.properties.til_brønd}</td>
                                                         <td>{feature.properties.system}</td>
                                                         <td>{feature.properties.kategori}</td>
                                                         <td>{feature.properties.materiale}</td>
@@ -478,7 +503,7 @@ module.exports = {
                                                         <td>{feature.properties.til_kote}</td>
                                                         <td>MANGLER !</td>
                                                         <td>{feature.properties.fysiskindeks}</td>
-                                                        <td>{feature.properties.bem}</td>
+                                                        <td style={styleObject.cellStyleLongText}>{feature.properties.bem}</td>
                                                         <td
                                                             style={{
                                                                 width: '20px',
@@ -505,14 +530,15 @@ module.exports = {
                                 <div style={styleObject.modalContent} onClick={(e) => e.stopPropagation()}>
                                     <h3>Feature Info</h3>
                                     <p><strong>Opstrøms brønd:</strong> {this.state.selectedFeature.properties.fra_brønd}</p>
-                                    <p><strong>Nedstrøms brønd:</strong> {this.state.selectedFeature.properties.til_brønd}</p>  
-                                    <textarea
-                                            onChange={(e) => this.handleProjectBem( e)}
-                                            value={this.state.selectedFeature.properties.bem}
-                                            className="w-100"
-                                            placeholder="Opgave beskrivelse">
-                                        </textarea>
+                                    <p><strong>Nedstrøms brønd:</strong> {this.state.selectedFeature.properties.til_brønd}</p>
+                                    <textarea autoFocus
+                                        onChange={(e) => this.handleProjectBem(e)}
+                                        value={this.state.selectedFeature.properties.bem}
+                                        className="w-100"
+                                        placeholder="Opgave beskrivelse">
+                                    </textarea>
                                     <button onClick={() => this.setState({ showModal: false })}>Luk</button>
+                                    <button onClick={(e) => this.handleProjectGem(e)}>Gem</button>
                                 </div>
                             </div>
                         )}

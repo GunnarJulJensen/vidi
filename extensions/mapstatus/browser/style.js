@@ -97,6 +97,9 @@ const styleObject = {
     cellStyleHeader: {
         fontWeight: 'bold !important',
     },
+    cellStyleLongText: {
+       overflowWrap: 'break-word'
+    },
     modalDialog: {
         display: 'block',
         paddingLeft: '0'
