@@ -11,7 +11,7 @@ import styleObject from "./style.js";
 import React from 'react';
 import SelectedFeaturesManager from './SelectedFeaturesManager.js';
 import ProjectSelector from "./ProjectSelector.js";
-import CreateProjectForm from "./CreateProjectForm.js";
+// import CreateProjectForm from "./CreateProjectForm.js";
 import FeatureTable from "./FeatureTable.js";
 import DraggableBox from "./DraggableBox.js";
 
@@ -229,7 +229,7 @@ module.exports = {
                                     Excel
                                 </button>
                             </div>
-                            {createProjectShow && (<CreateProjectForm
+                            {/* {createProjectShow && (<CreateProjectForm
                                 projectName={projectName}
                                 onNameChange={this.handleProjectName}
                                 onClose={() => this.showCreateProjectModal(false)}
@@ -238,7 +238,7 @@ module.exports = {
                                     this.showCreateProjectModal(false);
                                 }}
                                 isButtonEnabled={isButtonEnabled}
-                            />)}
+                            />)} */}
                         </div>
 
 
