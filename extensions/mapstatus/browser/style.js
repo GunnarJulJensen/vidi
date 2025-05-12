@@ -1,3 +1,4 @@
+const { over } = require("lodash");
 const height = require("../../../browser/modules/height");
 
 const styleObject = {
@@ -9,9 +10,9 @@ const styleObject = {
         fontSize: '12px',
         height: 'auto',
         inset: 'unset',
-        marginLeft: '10px',
-        marginRight: '10px',
+        margin: '10px',
         maxHeight: '500px',
+        overflow: 'hidden',
         padding: '5px',
         position: 'fixed',
         right: '75px',

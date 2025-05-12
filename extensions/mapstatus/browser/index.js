@@ -9,7 +9,11 @@
 import { convert as geojsonToWKT } from "terraformer-wkt-parser";
 import styleObject from "./style.js";
 import React from 'react';
-import SelectedFeaturesManager from './selectedFeatures.js' ;
+import SelectedFeaturesManager from './SelectedFeaturesManager.js';
+import ProjectSelector from "./ProjectSelector.js";
+import CreateProjectForm from "./CreateProjectForm.js";
+import FeatureTable from "./FeatureTable.js";
+import DraggableBox from "./DraggableBox.js";
 
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
 
@@ -30,7 +34,7 @@ var switchLayer = require("./../../../browser/modules/switchLayer");
 var utils;
 
 
- 
+
 
 
 const _makeSearch = (wkt) => {
@@ -45,7 +49,7 @@ const _makeSearch = (wkt) => {
             sqlQuery.init(qstore, wkt, "4326", () => {
                 if (qstore.length >= 1 && qstore[0].geoJSON) {
                     const promises = qstore[0].geoJSON.features.map(
-                        feature => 
+                        feature =>
                             featuresManager?.addFeature(feature)
                     );
                     Promise.all(promises).then(resolve).catch(reject);
@@ -113,13 +117,6 @@ module.exports = {
                 super(props);
                 this.state = {
                     createProjectShow: false,
-                    dragInfo: {
-                        x: 100,
-                        y: 100,
-                        offsetX: 0,
-                        offsetY: 0
-                    },
-                    isDragging: false,
                     projectName: "",
                     projectDescription: "",
                     projects: ["Vælg projekt", "Projekt 1. Indre Odense", "Projekt 2. Indre Odense", "Projekt 3. Indre Odense"],
@@ -129,53 +126,10 @@ module.exports = {
                     selectedFeatureId: 0,
                     selectedFeature: {},
                 };
-                this.boxRef = React.createRef();
             }
 
             rowRefs = [];
 
-            handleMouseDown = (e) => {
-                const rect = this.boxRef.current.getBoundingClientRect();
-                this.setState({
-                    isDragging: true,
-                    dragInfo: {
-                        ...this.state.dragInfo,
-                        offsetX: e.clientX - rect.left,
-                        offsetY: e.clientY - rect.top,
-                        x: rect.left,
-                        y: rect.top
-                    }
-
-                });
-                window.addEventListener("mousemove", this.handleMouseMove);
-                window.addEventListener("mouseup", this.handleMouseUp);
-            }
-
-            handleMouseUp = () => {
-                this.setState({ isDragging: false });
-                window.removeEventListener("mousemove", this.handleMouseMove);
-                window.removeEventListener("mouseup", this.handleMouseUp);
-            }
-
-            handleMouseMove = (e) => {
-                if (!this.state.isDragging) return;
-
-                if (e.clientX < 0 || e.clientY < 40) return;
-                if (e.clientX > window.innerWidth || e.clientY > window.innerHeight) return;
-
-                this.setState({
-                    dragInfo: {
-                        ...this.state.dragInfo,
-                        x: e.clientX - this.state.dragInfo.offsetX,
-                        y: e.clientY - this.state.dragInfo.offsetY
-                    }
-                });
-                if (this.boxRef.current) {
-                    this.boxRef.current.style.position = 'absolute';
-                    this.boxRef.current.style.left = `${this.state.dragInfo.x}px`;
-                    this.boxRef.current.style.top = `${this.state.dragInfo.y}px`;
-                }
-            }
 
             scrollToRow = () => {
                 const row = this.rowRefs[this.state.selectedRowIndex];
@@ -190,22 +144,19 @@ module.exports = {
                     this.forceUpdate();
                 });
                 backboneEvents.get().on(`${MAPSTATUS_MODULE_NAME}:updateSelected`, (selectedFeatureId) => {
-                    if (!selectedFeatureId) 
+                    if (!selectedFeatureId)
                         return;
-                    const si = featuresManager.getFeatures().findIndex(feature => feature.properties.id == selectedFeatureId);
+                    const si = featuresManager?.getFeatures().findIndex(feature => feature.properties.id == selectedFeatureId);
                     this.state.selectedRowIndex = si;
                     this.setState({ selectedRowIndex: si });
                     this.scrollToRow();
-                    selectedFeaturesHilite(selectedFeatureId);
+                    featuresManager?.hilite(selectedFeatureId);
                     this.forceUpdate();
 
                 });
             }
 
-
-            componentDidUpdate(prevProps, prevState) {
-
-            }
+            componentDidUpdate(prevProps, prevState) { }
 
             featureRowClick(feature, index) {
                 this.setState({ selectedRowIndex: index });
@@ -241,7 +192,7 @@ module.exports = {
                 const bemark = this.state.selectedFeature.properties.bem.trim();
 
                 if (featureId) {
-                    featuresManager?.updateFeatureProperty (featureId, "bem", bemark); // selectedFeatureUpdate(featureId, "bem", bemark);
+                    featuresManager?.updateFeatureProperty(featureId, "bem", bemark); // selectedFeatureUpdate(featureId, "bem", bemark);
                     backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
                 } else {
                     console.error("Feature not found with id: " + featureId);
@@ -249,190 +200,72 @@ module.exports = {
                 this.setState({ showModal: false })
             };
 
-
-            handleCheckboxChange(featureId, e) {
-                e.stopPropagation();
-                this.setState({ selectedFeatureId: featureId });
-                featuresManager?.updateFeatureProperty (featureId,  "isSelected", e.target.checked); 
-                selectedFeatureUpdate(featuresManager.getFeatures()[index].properties.id, "isSelected", e.target.checked);
+            exportExcel = (e) => {
+                alert("Eksporterer til Excel");
+                featuresManager?.downloadExcel("ledning_drift");
+                alert("Der er eksporteret til Excel");
             }
 
-            featureEdit(featureId) {
-                const feature = featuresManager.byId(featureId);
-                if (!feature) {
-                    return;
-                }
-                this.setState({ 
-                    showModal: true, 
-                    selectedFeature: feature
-                });
-            }
 
             render() {
-                const { projectName } = this.state;
+                const { projectName, createProjectShow, showModal, selectedFeature } = this.state;
                 const isButtonEnabled = projectName.trim() !== "";
-                const { projects, selectedProject } = this.state;
-
                 return (
                     <div role="tabpanel">
                         <div className="form-select mb-3" style={{ '--bsFormSelectBgImg': 'none' }}>
-                            <div className="m-2">
-                                <p>Vælg projekt</p>
-                                <select defaultValue="0" id="selectProject" onChange={() => _self.active(true)}>
-                                    {projects.map((option, index) => (
-                                        <option key={index} value={option}>
-                                            {option}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="form-select mb-3" style={{ '--bsFormSelectBgImg': 'none' }}>
-                            <p>Excel data</p>
-                            <button
-                                onClick={() => {
-                                    alert("Download excel regneark med valgte ledninger");
+                            <ProjectSelector
+                                projects={this.state.projects}
+                                selectedProject={this.state.selectedProject}
+                                onSelectChange={() => _self.active(true)}
+                                onCreateClick={() => {
+                                    this.setState({ createProjectShow: true });
+                                    _self.active(true);
+                                    this.showCreateProjectModal(true)
+                                    alert("Opret nyt projekt");
                                 }}
-                                className="btn btn-primary text-nowrap"
-                            >Hent data</button>
-                        </div>
-                        <div className="form-select" style={{ '--bsFormSelectBgImg': 'none' }}>
-                            <p> Projekt oprettelse</p>
-                            <div>
-                                <button
-                                    onClick={() => {
-                                        this.showCreateProjectModal(true);
-                                        _self.active(true);
-                                    }}
-                                    className="btn btn-primary text-nowrap"
-                                >Opret nyt projekt</button>
+                            />
+                            <div className="d-flex justify-content-between">
+                                <button className="btn btn-primary" onClick={() => this.exportExcel(true)}>
+                                    Excel
+                                </button>
                             </div>
-
-                            <br />
-
-                            {this.state.createProjectShow && (
-                                <div>
-                                    <div >
-                                        <input
-                                            type="text"
-                                            placeholder="Projekt navn"
-                                            defaultValue={projectName}
-                                            className="w-100"
-                                            onChange={this.handleProjectName}
-                                        />
-                                    </div>
-                                    <br />
-                                    <div>
-                                        <textarea
-                                            className="w-100"
-                                            placeholder="Projekt beskrivelse">
-                                        </textarea>
-                                    </div>
-                                    <div className="modal-footer">
-                                        <button
-                                            type="button"
-                                            className="btn btn-primary text-nowrap me-5"
-
-                                            onClick={() => {
-                                                this.showCreateProjectModal(false);
-                                            }}
-                                        >Luk
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn btn btn-primary text-nowrap"
-                                            disabled={!isButtonEnabled}
-                                            onClick={() => {
-                                                this.showCreateProjectModal(false);
-                                                this.addProject(projectName);
-                                            }}
-                                        >Gem</button>
-                                    </div>
-                                </div>
-                            )}
+                            {createProjectShow && (<CreateProjectForm
+                                projectName={projectName}
+                                onNameChange={this.handleProjectName}
+                                onClose={() => this.showCreateProjectModal(false)}
+                                onSave={() => {
+                                    this.addProject(projectName);
+                                    this.showCreateProjectModal(false);
+                                }}
+                                isButtonEnabled={isButtonEnabled}
+                            />)}
                         </div>
+
 
                         {featuresManager && featuresManager.length() > 0 && (
-                            <div
-                                style={styleObject.boxStyle}
-                                ref={this.boxRef}>
-                                <div onMouseDown={this.handleMouseDown}>
-                                    <h5>Valgte ledninger : { featuresManager.length()} </h5>
-                                </div>
-                                <div>
-                                    <table className="table table-striped table-hover table-sm" style={styleObject.tableStyle} >
-                                        <thead style={styleObject.theadStyle}>
-                                            <tr style={styleObject.rowStyle}>
-                                                <th style={{ width: '20px' }} ></th>
-                                                <th style={{ fontWeight: 'bold' }} >Opstr.</th>
-                                                <th style={{ fontWeight: 'bold' }}  >Nedstr.</th>
-                                                <th style={{ fontWeight: 'bold' }} >System</th>
-                                                <th style={{ fontWeight: 'bold' }}  >Kategori</th>
-                                                <th style={{ fontWeight: 'bold' }}  >Materiale</th>
-                                                <th style={{ fontWeight: 'bold' }}  >Rør diameter</th>
-                                                <th style={{ fontWeight: 'bold' }}  >Længde</th>
-                                                <th style={{ fontWeight: 'bold' }}  >Fra kote</th>
-                                                <th style={{ fontWeight: 'bold' }}  >Til kote</th>
-                                                <th style={{ fontWeight: 'bold' }}  >Dybde</th>
-                                                <th style={{ fontWeight: 'bold' }} >Fysisk indeks</th>
-                                                <th style={{ fontWeight: 'bold' }} >Bemærkning</th>
-                                                <th style={{ width: '20px' }} ></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody style={styleObject.tbodyStyle}>
-                                            { featuresManager.getFeatures().map((feature, index) => {
-                                                return (
-                                                    <tr
-                                                        ref={(el) => this.rowRefs[index] = el}
-                                                        onClick={() => this.featureRowClick(feature, index)} key={index}
-                                                        style={{
-                                                            cursor: 'pointer',
-                                                            display: 'table',
-                                                            width: '100%',
-                                                            tableLayout: 'fixed',
-                                                            border: this.state.selectedRowIndex === index ? '2px solid blue' : '1px solid gray',
-                                                            fontWeight: this.state.selectedRowIndex === index ? '900' : 'normal',
-                                                        }}>
-                                                        <td style={{ width: '20px' }}>
-
-                                                            {<input
-                                                                type='checkbox'
-                                                                checked={feature.properties.isSelected}
-                                                                onChange={(e) => this.handleCheckboxChange(feature.properties.id, e)}
-                                                            />}
-                                                        </td>
-                                                        <td style={styleObject.cellStyleLongText} >{feature.properties.fra_brønd}</td>
-                                                        <td style={styleObject.cellStyleLongText}>{feature.properties.til_brønd}</td>
-                                                        <td>{feature.properties.system}</td>
-                                                        <td>{feature.properties.kategori}</td>
-                                                        <td>{feature.properties.materiale}</td>
-                                                        <td>{feature.properties.handelsmål}</td>
-                                                        <td>{feature.properties.længde}</td>
-                                                        <td>{feature.properties.fra_kote}</td>
-                                                        <td>{feature.properties.til_kote}</td>
-                                                        <td>MANGLER !</td>
-                                                        <td>{feature.properties.fysiskindeks}</td>
-                                                        <td style={styleObject.cellStyleLongText}>{feature.properties.bem}</td>
-                                                        <td
-                                                            style={{
-                                                                width: '20px',
-                                                                textAlign: 'center'
-                                                            }}>
-                                                            <i className="bi bi-pen"
-                                                                onClick={(e) => {
-                                                                    // e.stopPropagation(); // Prevent row click event
-                                                                    this.featureEdit(feature.properties.id);
-
-                                                                }}
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                            <DraggableBox style={styleObject.boxStyle}
+                                headerText={'Valgte ledninger: ' + featuresManager.length()}
+                            >
+                                <FeatureTable
+                                    features={featuresManager.getFeatures()}
+                                    selectedRowIndex={this.state.selectedRowIndex}
+                                    onRowClick={(feature, index) => {
+                                        this.setState({ selectedRowIndex: index, selectedFeatureId: feature.properties.id });
+                                        featuresManager?.zoomToFeature(feature);
+                                        featuresManager?.updateFeature(feature.properties.id);
+                                    }}
+                                    onCheckboxChange={(featureId, checked) => {
+                                        this.setState({ selectedFeatureId: featureId });
+                                        featuresManager?.updateFeatureProperty(featureId, "isSelected", checked);
+                                    }}
+                                    onEditClick={(id) => {
+                                        const feature = featuresManager.byId(id);
+                                        if (feature) this.setState({ showModal: true, selectedFeature: feature });
+                                    }}
+                                    rowRefs={this.rowRefs}
+                                    styles={styleObject}
+                                />
+                            </DraggableBox>
                         )}
                         {this.state.showModal && (
                             <div style={styleObject.modalOverlay} onClick={() => this.setState({ showModal: false })}>
@@ -560,7 +393,7 @@ module.exports = {
             _self.startShapeSearch(e);
             backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`)
         });
-        
+
         cloud.get().map.on('draw:editstop', function (e) {
             _self.startShapeSearch(e);
         });
