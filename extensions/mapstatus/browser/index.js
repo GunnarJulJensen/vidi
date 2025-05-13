@@ -11,10 +11,9 @@ import styleObject from "./style.js";
 import React from 'react';
 import SelectedFeaturesManager from './SelectedFeaturesManager.js';
 import ProjectSelector from "./ProjectSelector.js";
-// import CreateProjectForm from "./CreateProjectForm.js";
+import CreateProjectForm from "./CreateProjectForm.js";
 import FeatureTable from "./FeatureTable.js";
 import DraggableBox from "./DraggableBox.js";
-
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
 
 require("./style.js");
@@ -32,10 +31,6 @@ var layerTree = require("./../../../browser/modules/layerTree");
 
 var switchLayer = require("./../../../browser/modules/switchLayer");
 var utils;
-
-
-
-
 
 const _makeSearch = (wkt) => {
     try {
@@ -108,9 +103,12 @@ module.exports = {
         });
 
         utils.createMainTab(exId, utils.__("MapStatus", dict), utils.__("Info", dict), require('./../../../browser/modules/height')().max, "bi bi-layout-text-window");
+        try {
+            featuresManager = new SelectedFeaturesManager(cloud.get().map, backboneEvents, MAPSTATUS_MODULE_NAME);
 
-        featuresManager = new SelectedFeaturesManager(cloud.get().map, backboneEvents, MAPSTATUS_MODULE_NAME);
-
+        } catch (e) {
+            alert("Error in MapStatus: " + e);
+        }
         class MapStatus extends React.Component {
 
             constructor(props) {
@@ -119,8 +117,8 @@ module.exports = {
                     createProjectShow: false,
                     projectName: "",
                     projectDescription: "",
-                    projects: ["Vælg projekt", "Projekt 1. Indre Odense", "Projekt 2. Indre Odense", "Projekt 3. Indre Odense"],
-                    selectedProject: "Vælg projekt",
+                    projects: [],
+                    selectedProjectId: 0,
                     selectedRowIndex: -1,
                     showModal: false,
                     selectedFeatureId: 0,
@@ -130,13 +128,21 @@ module.exports = {
 
             rowRefs = [];
 
-
+            buildProjectList = () => {
+                featuresManager?.getAllProjects('dd_vandcenter_syd')
+                    .then((projectOptions) => {
+                        this.setState({ projects: projectOptions });
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching projects:", error);
+                    });
+            };
             scrollToRow = () => {
                 const row = this.rowRefs[this.state.selectedRowIndex];
                 if (row) {
                     row.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-            }
+            };
 
             componentDidMount() {
                 $('.bi-layout-text-window').on('click', function () { });
@@ -154,7 +160,10 @@ module.exports = {
                     this.forceUpdate();
 
                 });
-            }
+
+                this.buildProjectList();
+
+            };
 
             componentDidUpdate(prevProps, prevState) { }
 
@@ -163,23 +172,32 @@ module.exports = {
                 this.setState({ selectedFeatureId: feature.properties.id });
                 featuresManager?.zoomToFeature(feature);
                 featuresManager?.updateFeature(feature.properties.id); // Opdaterer stilen for den valgte feature
-            }
+            };
+
             showCreateProjectModal = (show) => {
                 this.setState({ createProjectShow: show });
-            }
+            };
+
             addProject = (projectName) => {
-                this.state.projects.push(projectName);
-                this.setState({ projectName: projectName });
-                this.state.projectName = projectName;
+                const value = this.state.projects.length + 1;
+                this.state.projects.push({ value, label: projectName });
+                this.setState({ projectName: '' });
+                this.setState({ projectDescription: '' });
+                this.setState({ selectedProjectId: value });
+                this.showCreateProjectModal(false)
+
                 this.forceUpdate();
                 alert("Projekt oprettet: " + projectName);
+            };
 
-            }
+
+
             handleProjectName = (event) => {
                 this.setState({ projectName: event.target.value });
                 this.state.projectName = event.target.value;
                 this.forceUpdate();
-            }
+            };
+
             handleProjectBem = (event) => {
                 const bemark = event.target.value;
                 const editFeature = JSON.parse(JSON.stringify(this.state.selectedFeature));
@@ -200,46 +218,68 @@ module.exports = {
                 this.setState({ showModal: false })
             };
 
-            exportExcel = (e) => {
-                alert("Eksporterer til Excel");
-                featuresManager?.downloadExcel("ledning_drift");
-                alert("Der er eksporteret til Excel");
+            getProjektName = () => {
+                if (this.state.selectedProjectId === 0)
+                    return "";
+                const project = this.state.projects.find(p => p.value === this.state.selectedProjectId);
+                return project ? project.label : "";
+            };
+
+            exportExcel = () => {
+                featuresManager?.downloadExcel(this.getProjektName());
+            };
+
+            handleProjectSelect = (selectedProjectId) => {
+                _self.active(true);
+                alert("Projekt valgt: " + selectedProjectId);
+                this.setState({ selectedProjectId: selectedProjectId });
+                featuresManager?.getFromDb(selectedProjectId);
+            };
+
+            handleNewProjectStart = () => {
+                this.setState({ createProjectShow: true });
+                _self.active(true);
+                this.setState({ selectedProjectId: 0 });
+                this.setState({ selectedRowIndex: -1 });
+                this.setState({ showModal: false });
+                this.showCreateProjectModal(true)
+                featuresManager?.clear();
             }
 
 
             render() {
-                const { projectName, createProjectShow, showModal, selectedFeature } = this.state;
-                const isButtonEnabled = projectName.trim() !== "";
+                const { selectedProjectId, createProjectShow, showModal, selectedFeature } = this.state;
+                const isProjectSelected = selectedProjectId !== 0;
                 return (
                     <div role="tabpanel">
-                        <div className="form-select mb-3" style={{ '--bsFormSelectBgImg': 'none' }}>
-                            <ProjectSelector
-                                projects={this.state.projects}
-                                selectedProject={this.state.selectedProject}
-                                onSelectChange={() => _self.active(true)}
-                                onCreateClick={() => {
-                                    this.setState({ createProjectShow: true });
-                                    _self.active(true);
-                                    this.showCreateProjectModal(true)
-                                    alert("Opret nyt projekt");
-                                }}
-                            />
-                            <div className="d-flex justify-content-between">
-                                <button className="btn btn-primary" onClick={() => this.exportExcel(true)}>
-                                    Excel
-                                </button>
+                        <div className="form-select mb-3" style={styleObject.noFormUrl}>
+                            <div className="row flex">
+                                <div className="col-sm-8">
+                                    <ProjectSelector
+                                        projects={this.state.projects}
+                                        selectedProject={this.state.selectedProject}
+                                        onSelectChange={this.handleProjectSelect}
+                                        onCreateClick={this.handleNewProjectStart}
+                                    />
+                                </div>
+                                {isProjectSelected && (
+                                    <div className="d-flex justify-content-between col-sm-4 h-50 d-inline-block" >
+                                        <button className="btn btn-primary" onClick={() => this.exportExcel()}>
+                                            Excel
+                                        </button>
+                                    </div>)}
                             </div>
-                            {/* {createProjectShow && (<CreateProjectForm
-                                projectName={projectName}
-                                onNameChange={this.handleProjectName}
-                                onClose={() => this.showCreateProjectModal(false)}
-                                onSave={() => {
-                                    this.addProject(projectName);
-                                    this.showCreateProjectModal(false);
-                                }}
-                                isButtonEnabled={isButtonEnabled}
-                            />)} */}
                         </div>
+                        {createProjectShow && (
+                            <CreateProjectForm
+                                projectName={this.state.projectName}
+                                projectDescription={this.state.projectDescription}
+                                onProjectNameChange={this.handleProjectName}
+                                onProjectDescriptionChange={(e) => this.setState({ projectDescription: e.target.value })}
+                                onClose={() => this.showCreateProjectModal(false)}
+                                onSave={() => this.addProject(this.state.projectName)}
+                            />
+                        )}
 
 
                         {featuresManager && featuresManager.length() > 0 && (

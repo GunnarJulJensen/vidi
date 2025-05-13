@@ -1,4 +1,4 @@
-import { tileLayer } from 'leaflet';
+import { name } from 'mustache';
 
 const XLSX = require('xlsx');
 export default class SelectedFeaturesManager {
@@ -111,6 +111,35 @@ export default class SelectedFeaturesManager {
       feature.properties[propertyName] = value;
     }
   }
+  saveToDb(projektId) {
+    alert($`Gemmer projet {projektId} til DB`);
+  }
+
+  getFromDb(projektId) {
+    alert("Henter fra DB " + projektId);
+    // const url = `/api/extension/mapstatus/GetProject/${skema}`;
+    
+  }
+
+  async getAllProjects(skema) {
+    try {
+      const url = `/api/extension/mapstatus/GetProjects/${skema}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+           
+      const projects = data.features.map((feature) => ({ id: feature.properties.id, label: feature.properties.navn }));      
+      projects.unshift({ id: 0, label: "Vælg projekt" });
+      
+      return projects ;
+    } catch (e) {
+      console.error("Error in getAllProjects: " + e);
+      return {};
+    }
+  }
+
 
   /* 
     Det er valgt at hårdkode kolonneoverskrifterne i stedet for at hente dem fra geojson filen aht. projektet omfang.
@@ -120,33 +149,34 @@ export default class SelectedFeaturesManager {
   downloadExcel(filename) {
 
     const headers = [
-      'Opstr.', 
-      'Nedstr.', 
-      'System', 
-      'Kategori', 
-      'Materiale', 
-      'Rør diameter', 
-      'Længde', 
-      'Fra kote', 
-      'Til kote', 
-      'Dybde', 
-      'Fysisk indeks', 
+      'Opstr.',
+      'Nedstr.',
+      'System',
+      'Kategori',
+      'Materiale',
+      'Rør diameter',
+      'Længde',
+      'Fra kote',
+      'Til kote',
+      'Dybde',
+      'Fysisk indeks',
       'Bemærkning'];
+
     const rows = this._geojson.features.map(f => ({
-      fra_brønd: f.properties.fra_brønd,
-      til_brønd: f.properties.til_brønd,
-      system: f.properties.system,
-      kategori: f.properties.kategori,
-      materiale: f.properties.materiale,
-      handelsmål: f.properties.handelsmål,
-      længde: f.properties.længde,
-      fra_kote: f.properties.fra_kote,
-      til_kote: f.properties.til_kote,
-      dybde: f.properties.dybde,
-      fysiskindeks: f.properties.fysiskindeks,
-      bem: f.properties.bem
+      [headers[0]]: f.properties.fra_brønd,
+      [headers[1]]: f.properties.til_brønd,
+      [headers[2]]: f.properties.system,
+      [headers[3]]: f.properties.kategori,
+      [headers[4]]: f.properties.materiale,
+      [headers[5]]: f.properties.handelsmål,
+      [headers[6]]: f.properties.længde,
+      [headers[7]]: f.properties.fra_kote,
+      [headers[8]]: f.properties.til_kote,
+      [headers[9]]: f.properties.dybde,
+      [headers[10]]: f.properties.fysiskindeks,
+      [headers[11]]: f.properties.bem
     }));
-    //const rows = this._geojson.features.map(f => f.properties);
+
     if (rows.length === 0) {
       console.error("No features to export");
       return;
@@ -154,8 +184,9 @@ export default class SelectedFeaturesManager {
 
 
     const data = [headers, ...rows];
-    //const worksheet = XLSX.utils.json_to_sheet(rows);
-    const worksheet = XLSX.utils.aoa_to_sheet(data);
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    // const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+    // const worksheet = XLSX.utils.aoa_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
     XLSX.writeFile(workbook, filename + ".xlsx");

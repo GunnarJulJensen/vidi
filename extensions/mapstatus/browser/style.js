@@ -92,10 +92,10 @@ const styleObject = {
         display: 'table',
         width: '100%',
         tableLayout: 'fixed',
-        fontWeight: 'bold !important',
     },
 
     cellStyleHeader: {
+        width: '100%',
         fontWeight: 'bold !important',
     },
     cellStyleLongText: {
@@ -104,16 +104,11 @@ const styleObject = {
     modalDialog: {
         display: 'block',
         paddingLeft: '0'
-        // position: 'fixed',
-        // top: '50%',
-        // left: '50%',
-        // transform: 'translate(-50%, -50%)',
-        // backgroundColor: '#fff',
-        // padding: '20px',
-        // zIndex: 1000,
-        // borderRadius: '8px',
-        // boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
     },
+    noFormUrl: {
+        '--bsFormSelectBgImg': 'none'
+    }
+
 
 };
 module.exports = styleObject;

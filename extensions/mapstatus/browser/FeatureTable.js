@@ -70,7 +70,7 @@ class FeatureTable extends React.Component {
                             <td>MANGLER!</td>
                             <td>{feature.properties.fysiskindeks}</td>
                             <td style={styles.cellStyleLongText}>{feature.properties.bem}</td>
-                            <td style={{ textAlign: 'center' }}>
+                            <td style={{ textAlign: 'center', width: '20px' }}>
                                 <i className="bi bi-pen" onClick={() => onEditClick(feature.properties.id)} />
                             </td>
                         </tr>
