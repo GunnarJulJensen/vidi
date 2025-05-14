@@ -16,14 +16,12 @@ GC2_HOST = config.gc2.host;
 // Set locale for date/time string
 moment.locale("da_DK");
 
-var BACKEND = config.backend;
+const BACKEND = config.backend;
+const SCHEMA = "projekt";
+const TABLEDATA = "projektdata";
 
 
-var SCHEMA = "projekt";
-var TABLEDATA = "projektdata";
-
-
-var userString = function (req) {
+const userString = (req) => {
     var userstr = "";
     if (req.session.subUser) {
         var userstr = req.session.gc2UserName + "@" + req.session.parentDb;
@@ -107,13 +105,19 @@ function SQLAPI(q, req, options = null) {
 
 // }
 
-
+/**********************************************************************
+ * POST /api/extension/mapstatus/SetProject/:skema
+ * 
+ *  Gem projekt til DB
+ *  
+ *  
+ **********************************************************************/
 router.get(
-    "/api/extension/mapstatus/GetProject/:skema/:projektid", (req, response) => {
+    "/api/extension/mapstatus/GetProject/:projektid", (req, response) => {
         guard(req, response);
-        const skema = req.params.skema;
+        
         const projektid = req.params.projektid;
-        const sql = `SELECT id, navn, beskrivelse,geojson FROM ${skema}.${TABLEDATA} where id = ${projektid}`;
+        const sql = `SELECT id, navn, beskrivelse,geojson FROM ${SCHEMA}.${TABLEDATA} where id = ${projektid}`;
         SQLAPI(sql, req)
             .then((result) => {
                 response.json(result);
@@ -124,12 +128,19 @@ router.get(
             });
     });
 
+/**********************************************************************
+* GET /api/extension/mapstatus/GetProjects/:skema
+*  Hent alle projekter med et bestem skama navn fra projet.projektdata
+*  Alle projekter gemmes i samme skama
+*  
+**********************************************************************/     
 router.get(
     "/api/extension/mapstatus/GetProjects/:skema", (req, response) => {
         guard(req, response);
 
         const skema = req.params.skema;
-        const sql = `SELECT id, navn, beskrivelse FROM ${skema}.${TABLEDATA}`;
+        const sql = `SELECT id, navn, beskrivelse FROM ${SCHEMA}.${TABLEDATA} where skema = '${skema}' order by navn`;
+        //console.log(sql);
 
         // Pak SQLAPI i promise chain
         SQLAPI(sql, req)
@@ -141,6 +152,35 @@ router.get(
                 response.status(500).send("Fejl ved databaseopslag");
             });
     }
+);
+
+/**********************************************************************
+ * POST /api/extension/mapstatus/SetProject/:skema
+ * 
+ *  Gem projekt til DB
+ *  
+ *  
+ **********************************************************************/    
+router.post(
+    "/api/extension/mapstatus/saveproject/", (req, response) => {
+        guard(req, response);
+        const projekt = req.body;
+        const sql = `UPDATE  ${SCHEMA}.${TABLEDATA} set
+            geojson ='${JSON.stringify(projekt.geojson)}' , 
+            navn ='${projekt.navn}',
+            beskrivelse = '${projekt.beskrivelse}' 
+            WHERE id = ${projekt.id}`;
+        //console.log(sql);
+
+        SQLAPI(sql, req)
+            .then((result) => {
+                response.json(result);
+            })
+            .catch((err) => {
+                console.error("Fejl i SQLAPI:", err);
+                response.status(500).send("Fejl ved databaseopslag");
+            });
+    }   
 );
 
 module.exports = router;

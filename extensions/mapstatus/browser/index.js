@@ -13,6 +13,7 @@ import SelectedFeaturesManager from './SelectedFeaturesManager.js';
 import ProjectSelector from "./ProjectSelector.js";
 import CreateProjectForm from "./CreateProjectForm.js";
 import FeatureTable from "./FeatureTable.js";
+import FeatureTableContainer from "./FeatureTableContainer.js";
 import DraggableBox from "./DraggableBox.js";
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
 
@@ -117,13 +118,15 @@ module.exports = {
                     createProjectShow: false,
                     projectName: "",
                     projectDescription: "",
+                    activeProject: this.createProjectData() || {},
                     projects: [],
-                    selectedProjectId: 0,
+                    //selectedProjectId: 0,
                     selectedRowIndex: -1,
                     showModal: false,
                     selectedFeatureId: 0,
                     selectedFeature: {},
                 };
+
             }
 
             rowRefs = [];
@@ -165,6 +168,15 @@ module.exports = {
 
             };
 
+            createProjectData() {
+                return {
+                    id: 0,
+                    navn: 'Uden navn',
+                    beskrivelse: '',
+                    skema: ''
+                };
+            }
+
             componentDidUpdate(prevProps, prevState) { }
 
             featureRowClick(feature, index) {
@@ -184,6 +196,7 @@ module.exports = {
                 this.setState({ projectName: '' });
                 this.setState({ projectDescription: '' });
                 this.setState({ selectedProjectId: value });
+                this.setState(prevState => ({ projektData: { ...prevState.projektData, [feltNavn]: værdi } }));
                 this.showCreateProjectModal(false)
 
                 this.forceUpdate();
@@ -219,9 +232,9 @@ module.exports = {
             };
 
             getProjektName = () => {
-                if (this.state.selectedProjectId === 0)
+                if (this.state.activeProject.id === 0)
                     return "";
-                const project = this.state.projects.find(p => p.value === this.state.selectedProjectId);
+                const project = this.state.projects.find(p => p.value === this.state.activeProject.id);
                 return project ? project.label : "";
             };
 
@@ -231,15 +244,22 @@ module.exports = {
 
             handleProjectSelect = (selectedProjectId) => {
                 _self.active(true);
-                alert("Projekt valgt: " + selectedProjectId);
-                this.setState({ selectedProjectId: selectedProjectId });
-                featuresManager?.getFromDb(selectedProjectId);
+                featuresManager?.getProjectAsync(selectedProjectId, this.createProjectData())
+                    .then((data) => {
+                        this.setState({ activeProject: data });
+                        this.setState({ projektData: data });
+                        this.forceUpdate();
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching project:", error);
+                    });
             };
 
             handleNewProjectStart = () => {
                 this.setState({ createProjectShow: true });
                 _self.active(true);
-                this.setState({ selectedProjectId: 0 });
+                this.setState({ activeProject: this.createProjectData() });
+                //this.setState({ selectedProjectId: 0 });
                 this.setState({ selectedRowIndex: -1 });
                 this.setState({ showModal: false });
                 this.showCreateProjectModal(true)
@@ -248,8 +268,8 @@ module.exports = {
 
 
             render() {
-                const { selectedProjectId, createProjectShow, showModal, selectedFeature } = this.state;
-                const isProjectSelected = selectedProjectId !== 0;
+                const { activeProject, createProjectShow, showModal, selectedFeature } = this.state;
+                const isProjectSelected = activeProject.id !== 0;
                 return (
                     <div role="tabpanel">
                         <div className="form-select mb-3" style={styleObject.noFormUrl}>
@@ -283,8 +303,12 @@ module.exports = {
 
 
                         {featuresManager && featuresManager.length() > 0 && (
-                            <DraggableBox style={styleObject.boxStyle}
+                            <DraggableBox
+                                style={styleObject.boxStyle}
                                 headerText={'Valgte ledninger: ' + featuresManager.length()}
+                                onSave={() => {
+                                    featuresManager?.saveProjectAsync('dd_vandcenter_syd', this.state.activeProject);
+                                }}
                             >
                                 <FeatureTable
                                     features={featuresManager.getFeatures()}

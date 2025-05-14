@@ -52,9 +52,9 @@ class FeatureTable extends React.Component {
                                     type="checkbox"
                                     onClick={(e) => e.stopPropagation()}
                                     checked={feature.properties.isSelected}
-                                    onChange={(e) => { 
-                                        e.stopPropagation(); 
-                                        onCheckboxChange(feature.properties.id, e.target.checked);  
+                                    onChange={(e) => {
+                                        e.stopPropagation();
+                                        onCheckboxChange(feature.properties.id, e.target.checked);
                                     }}
                                 />
                             </td>
@@ -77,6 +77,7 @@ class FeatureTable extends React.Component {
                     ))}
                 </tbody>
             </table>
+
         );
     }
 }
