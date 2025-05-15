@@ -74,7 +74,8 @@ export default class SelectedFeaturesManager {
       onEachFeature: (feature, layer) => {
         if (feature.properties?.id) {
           layer.on('click', () => {
-            this.zoomToFeature(feature);
+            //   Denne er fjernet så kortet ikke hopper når der klikkes på en feature
+            // this.zoomToFeature(feature);
             this.selectedFeatureId = feature.properties.id;
             this.hilite(this.selectedFeatureId);
             this.backboneEvents.get().trigger(`${this.MAPSTATUS_MODULE_NAME}:updateSelected`, this.selectedFeatureId);
@@ -114,37 +115,37 @@ export default class SelectedFeaturesManager {
   }
 
 
- async saveProjectAsync(skema, projektData) {
-  try {
-    
-    const projectBody = {
-      ...projektData,
-      skema: skema,
-      geojson: this._geojson // overskriv geojson
-    };
+  async saveProjectAsync(skema, projektData) {
+    try {
 
-    const url = `/api/extension/mapstatus/saveproject/`;
+      const projectBody = {
+        ...projektData,
+        skema: skema,
+        geojson: this._geojson // overskriv geojson
+      };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(projectBody)
-    });
+      const url = `/api/extension/mapstatus/saveproject/`;
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(projectBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+
+    } catch (e) {
+      console.error("Error in saveProjectAsync:", e);
+      return {};
     }
-
-    const data = await response.json();
-    return data;
-
-  } catch (e) {
-    console.error("Error in saveProjectAsync:", e);
-    return {};
   }
-}
 
 
   async fetchDataAsync(url) {
@@ -168,11 +169,11 @@ export default class SelectedFeaturesManager {
       Object.assign(projektData, data.features[0].properties);
       this.clear();
       if (data.features && data.features[0].properties.geojson) {
-        const geojson = JSON.parse ( data.features[0].properties.geojson);
-        for(let i = 0; i < geojson.features.length; i++) {
+        const geojson = JSON.parse(data.features[0].properties.geojson);
+        for (let i = 0; i < geojson.features.length; i++) {
           const feature = geojson.features[i];
           this.addFeature(feature);
-        } 
+        }
       }
     }
     return projektData;
@@ -182,12 +183,7 @@ export default class SelectedFeaturesManager {
 
   async getAllProjects(skema) {
     try {
-      // const url = `/api/extension/mapstatus/GetProjects/${skema}`;
-      // const response = await fetch(url);
-      // if (!response.ok) {
-      //   throw new Error(`HTTP error! status: ${response.status}`);
-      // }
-      // const data = await response.json();
+
       const url = `/api/extension/mapstatus/GetProjects/${skema}`;
       const data = await this.fetchDataAsync(url);
       const projects = data.features.map((feature) => ({ id: feature.properties.id, label: feature.properties.navn }));
@@ -201,11 +197,10 @@ export default class SelectedFeaturesManager {
   }
 
 
-  /* 
-    Det er valgt at hårdkode kolonneoverskrifterne i stedet for at hente dem fra geojson filen aht. projektet omfang.
-    Det vil sige at hvis kolonner ændres, fjernes eller tilføjes skal det rettes både her og i FeatureTable.js.
-  
-  */
+  /*********************************************************************************************************************  
+  *  Det er valgt at hårdkode kolonneoverskrifterne i stedet for at hente dem fra geojson filen aht. projektet omfang. * 
+  *  Det vil sige at hvis kolonner ændres, fjernes eller tilføjes skal det rettes både her og i FeatureTable.js.       *
+  **********************************************************************************************************************/
   downloadExcel(filename) {
 
     const headers = [
@@ -222,28 +217,29 @@ export default class SelectedFeaturesManager {
       'Fysisk indeks',
       'Bemærkning'];
 
-    const rows = this._geojson.features.map(f => ({
-      [headers[0]]: f.properties.fra_brønd,
-      [headers[1]]: f.properties.til_brønd,
-      [headers[2]]: f.properties.system,
-      [headers[3]]: f.properties.kategori,
-      [headers[4]]: f.properties.materiale,
-      [headers[5]]: f.properties.handelsmål,
-      [headers[6]]: f.properties.længde,
-      [headers[7]]: f.properties.fra_kote,
-      [headers[8]]: f.properties.til_kote,
-      [headers[9]]: f.properties.dybde,
-      [headers[10]]: f.properties.fysiskindeks,
-      [headers[11]]: f.properties.bem
-    }));
+    const rows = this._geojson.features
+      .filter(f => f.properties.isSelected === true)
+      .map(f => ({
+        [headers[0]]: f.properties.fra_brønd,
+        [headers[1]]: f.properties.til_brønd,
+        [headers[2]]: f.properties.system,
+        [headers[3]]: f.properties.kategori,
+        [headers[4]]: f.properties.materiale,
+        [headers[5]]: f.properties.handelsmål,
+        [headers[6]]: f.properties.længde,
+        [headers[7]]: f.properties.fra_kote,
+        [headers[8]]: f.properties.til_kote,
+        [headers[9]]: f.properties.dybde,
+        [headers[10]]: f.properties.fysiskindeks,
+        [headers[11]]: f.properties.bem
+      }));
 
     if (rows.length === 0) {
       console.error("No features to export");
       return;
     }
 
-    const data = [headers, ...rows];
-    const worksheet = XLSX.utils.json_to_sheet(data);
+    const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
     XLSX.writeFile(workbook, filename + ".xlsx");

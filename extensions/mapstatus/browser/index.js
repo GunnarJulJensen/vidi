@@ -13,7 +13,6 @@ import SelectedFeaturesManager from './SelectedFeaturesManager.js';
 import ProjectSelector from "./ProjectSelector.js";
 import CreateProjectForm from "./CreateProjectForm.js";
 import FeatureTable from "./FeatureTable.js";
-import FeatureTableContainer from "./FeatureTableContainer.js";
 import DraggableBox from "./DraggableBox.js";
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
 
@@ -132,7 +131,8 @@ module.exports = {
             rowRefs = [];
 
             buildProjectList = () => {
-                featuresManager?.getAllProjects('dd_vandcenter_syd')
+                const skema = this.getSkemea();
+                featuresManager?.getAllProjects(skema)
                     .then((projectOptions) => {
                         this.setState({ projects: projectOptions });
                     })
@@ -196,15 +196,18 @@ module.exports = {
                 this.setState({ projectName: '' });
                 this.setState({ projectDescription: '' });
                 this.setState({ selectedProjectId: value });
-                this.setState(prevState => ({ projektData: { ...prevState.projektData, [feltNavn]: værdi } }));
+                this.setState(prevState => ({ projektData: { ...prevState.projektData, navn: projectName } }));
                 this.showCreateProjectModal(false)
+
 
                 this.forceUpdate();
                 alert("Projekt oprettet: " + projectName);
             };
 
-
-
+            getSkemea = () => {
+                const words = window.location.pathname.split("/").filter(Boolean);
+                return words.length > 0  ?  words[words.length - 1] : '';
+            } 
             handleProjectName = (event) => {
                 this.setState({ projectName: event.target.value });
                 this.state.projectName = event.target.value;
@@ -231,15 +234,9 @@ module.exports = {
                 this.setState({ showModal: false })
             };
 
-            getProjektName = () => {
-                if (this.state.activeProject.id === 0)
-                    return "";
-                const project = this.state.projects.find(p => p.value === this.state.activeProject.id);
-                return project ? project.label : "";
-            };
-
             exportExcel = () => {
-                featuresManager?.downloadExcel(this.getProjektName());
+                const name= this.state.activeProject?.navn || this.state.projectName;
+                featuresManager?.downloadExcel(name);
             };
 
             handleProjectSelect = (selectedProjectId) => {
@@ -307,7 +304,8 @@ module.exports = {
                                 style={styleObject.boxStyle}
                                 headerText={'Valgte ledninger: ' + featuresManager.length()}
                                 onSave={() => {
-                                    featuresManager?.saveProjectAsync('dd_vandcenter_syd', this.state.activeProject);
+                                    const skema = this.getSkemea();
+                                    featuresManager?.saveProjectAsync(skema, this.state.activeProject);
                                 }}
                             >
                                 <FeatureTable

@@ -154,11 +154,38 @@ router.get(
     }
 );
 
+
 /**********************************************************************
- * POST /api/extension/mapstatus/SetProject/:skema
+ * POST /api/extension/mapstatus/createroject/
  * 
- *  Gem projekt til DB
- *  
+ *  Opret nyt projekt i  DB. 
+ *   Input er skema, navn og beskrivelse.
+ *   Id tildeles automatisk af DB
+ *   geojson er tom som  udgangspunkt 
+  **********************************************************************/    
+
+router.post(
+    "/api/extension/mapstatus/createroject/", (req, response) => {
+        guard(req, response);
+        const projekt = req.body;
+        const skema = req.params.skema;
+        const sql = `INSERT INTO ${SCHEMA}.${TABLEDATA} (skema,  navn, beskrivelse) VALUES ('${skema}', '${projekt.navn}', '${projekt.beskrivelse}')`;
+
+        SQLAPI(sql, req)
+            .then((result) => {
+                response.json(result);
+            })
+            .catch((err) => {
+                console.error("Fejl i SQLAPI:", err);
+                response.status(500).send("Fejl ved databaseopslag");
+            });
+    }
+);
+
+/**********************************************************************
+ * POST /api/extension/mapstatus/saveproject/:skema
+ * 
+ *  Opdaterer eksisterende projekt til DB
  *  
  **********************************************************************/    
 router.post(
@@ -170,7 +197,6 @@ router.post(
             navn ='${projekt.navn}',
             beskrivelse = '${projekt.beskrivelse}' 
             WHERE id = ${projekt.id}`;
-        //console.log(sql);
 
         SQLAPI(sql, req)
             .then((result) => {
