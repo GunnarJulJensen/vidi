@@ -1,10 +1,11 @@
-const { over } = require("lodash");
+const { over, head } = require("lodash");
 const height = require("../../../browser/modules/height");
 
 const styleObject = {
 
     boxStyle: {
-        backgroundColor: '#9bc0e0',
+        backgroundColor: '#d0d3db',
+        border: '1px solid #000',
         bottom: '10px',
         cursor: 'grab',
         fontSize: '12px',
@@ -21,16 +22,16 @@ const styleObject = {
         zIndex: 10200
     },
     modalOverlay: {
-        
-        position:'fixed',
+
+        position: 'fixed',
         zIndex: 10201,
         top: 0,
-        left: 0, 
-        right: 0, 
+        left: 0,
+        right: 0,
         bottom: 0,
         background: 'rgba(0, 0, 0, 0.5)',
     },
-      
+
     modalContent: {
         background: 'white',
         padding: '20px',
@@ -40,66 +41,49 @@ const styleObject = {
     },
 
     tableContainer: {
-        display: 'block',
-        textAlign: 'center',
+        overflowY: 'auto',
+        maxHeight: '300px',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
     },
 
     tableHeader: {
         position: 'sticky',
         top: 0,
-        fontSize: '1.2em',
-        fontWeight: 'bold !important',
-        display: 'table',
-        width: '100%',
-        tableLayout: 'fixed'
+        fontWeight: 'bold'
     },
 
-    scrollable: {
-        display: 'block',
-        overflowY: 'auto',
-        maxHeight: '300px',
-        width: '100%',
+    tableHeaderSmall: {
+        position: 'sticky',
+        top: 0,
+        width: '20px',
+        fontWeight: 'bold'
     },
-    tableRow: {
-        display: 'table',
-        width: '100%',
-        tableLayout: 'fixed'
-    },
+
     tableStyle: {
         width: '100%',
         borderCollapse: 'collapse',
-        tableLayout: 'fixed',
+        // tableLayout: 'fixed',
     },
 
-    theadStyle: {
-        display: 'table',
-        width: '100%',
-        tableLayout: 'fixed',
-        position: 'sticky',
-        top: 0,
-        backgroundColor: '#f2f2f2',
-        zIndex: 2,
+    headerRow: {
+
+        fontWeight: 'bold !important',
     },
 
     tbodyStyle: {
-        display: 'block',
         maxHeight: '300px',
         overflowY: 'auto',
         width: '100%',
     },
 
-    rowStyle: {
-        display: 'table',
-        width: '100%',
-        tableLayout: 'fixed',
-    },
 
     cellStyleHeader: {
         width: '100%',
         fontWeight: 'bold !important',
     },
     cellStyleLongText: {
-       overflowWrap: 'break-word'
+        overflowWrap: 'break-word'
     },
     modalDialog: {
         display: 'block',

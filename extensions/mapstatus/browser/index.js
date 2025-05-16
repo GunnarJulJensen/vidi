@@ -256,7 +256,6 @@ module.exports = {
                 this.setState({ createProjectShow: true });
                 _self.active(true);
                 this.setState({ activeProject: this.createProjectData() });
-                //this.setState({ selectedProjectId: 0 });
                 this.setState({ selectedRowIndex: -1 });
                 this.setState({ showModal: false });
                 this.showCreateProjectModal(true)
@@ -302,7 +301,7 @@ module.exports = {
                         {featuresManager && featuresManager.length() > 0 && (
                             <DraggableBox
                                 style={styleObject.boxStyle}
-                                headerText={'Valgte ledninger: ' + featuresManager.length()}
+                                headerText={ `Projekt:${this.state.activeProject.navn } Antal ledninger: ${featuresManager.length()}`}
                                 onSave={() => {
                                     const skema = this.getSkemea();
                                     featuresManager?.saveProjectAsync(skema, this.state.activeProject);
