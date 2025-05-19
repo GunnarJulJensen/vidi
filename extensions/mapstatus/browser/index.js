@@ -5,15 +5,20 @@
  */
 
 'use strict';
-
-import { convert as geojsonToWKT } from "terraformer-wkt-parser";
-import styleObject from "./style.js";
 import React from 'react';
-import SelectedFeaturesManager from './SelectedFeaturesManager.js';
-import ProjectSelector from "./ProjectSelector.js";
+
 import CreateProjectForm from "./CreateProjectForm.js";
-import FeatureTable from "./FeatureTable.js";
 import DraggableBox from "./DraggableBox.js";
+import EditDialog from './EditDialog.js';
+import FeatureTable from "./FeatureTable.js";
+import ProjectSelector from "./ProjectSelector.js";
+import SelectedFeaturesManager from './SelectedFeaturesManager.js';
+import styleObject from "./style.js";
+import { convert as geojsonToWKT } from "terraformer-wkt-parser";
+
+
+
+
 const MAPSTATUS_MODULE_NAME = `mapstatus`;
 
 require("./style.js");
@@ -124,6 +129,8 @@ module.exports = {
                     showModal: false,
                     selectedFeatureId: 0,
                     selectedFeature: {},
+                    isLoggedIn: false
+
                 };
 
             }
@@ -131,13 +138,15 @@ module.exports = {
             rowRefs = [];
 
             buildProjectList = () => {
-                const skema = this.getSkemea();
+                const skema = this.getSkema();
                 featuresManager?.getAllProjects(skema)
                     .then((projectOptions) => {
                         this.setState({ projects: projectOptions });
+                        this.setState({ isLoggedIn: true });
                     })
                     .catch((error) => {
-                        console.error("Error fetching projects:", error);
+                        this.setState({ isLoggedIn: false });
+                        this.forceUpdate();
                     });
             };
             scrollToRow = () => {
@@ -204,38 +213,48 @@ module.exports = {
                 alert("Projekt oprettet: " + projectName);
             };
 
-            getSkemea = () => {
+            getSkema = () => {
                 const words = window.location.pathname.split("/").filter(Boolean);
-                return words.length > 0  ?  words[words.length - 1] : '';
-            } 
+                return words.length > 0 ? words[words.length - 1] : '';
+            }
+
+            getProjectName = () => {
+                let projectName = this.getSkema();
+                projectName = projectName.replace('dd_', '');
+                projectName = projectName.charAt(0).toUpperCase() + projectName.slice(1)
+                return projectName;
+            }    
+
+
             handleProjectName = (event) => {
                 this.setState({ projectName: event.target.value });
                 this.state.projectName = event.target.value;
                 this.forceUpdate();
             };
 
-            handleProjectBem = (event) => {
-                const bemark = event.target.value;
+            handleProjectBem = (bemark) => {
                 const editFeature = JSON.parse(JSON.stringify(this.state.selectedFeature));
                 editFeature.properties.bem = bemark;
                 this.setState({ selectedFeature: editFeature });
             };
 
-            handleProjectGem = (e) => {
-                const featureId = this.state.selectedFeature.properties.id;
-                const bemark = this.state.selectedFeature.properties.bem.trim();
+            handleFeatureEdit = (save) => {
+                if (save) {
+                    const featureId = this.state.selectedFeature.properties.id;
+                    const bemark = this.state.selectedFeature.properties.bem.trim();
 
-                if (featureId) {
-                    featuresManager?.updateFeatureProperty(featureId, "bem", bemark); // selectedFeatureUpdate(featureId, "bem", bemark);
-                    backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
-                } else {
-                    console.error("Feature not found with id: " + featureId);
+                    if (featureId) {
+                        featuresManager?.updateFeatureProperty(featureId, "bem", bemark); // selectedFeatureUpdate(featureId, "bem", bemark);
+                        backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
+                    } else {
+                        console.error("Feature not found with id: " + featureId);
+                    }
                 }
                 this.setState({ showModal: false })
             };
 
             exportExcel = () => {
-                const name= this.state.activeProject?.navn || this.state.projectName;
+                const name = this.state.activeProject?.navn || this.state.projectName;
                 featuresManager?.downloadExcel(name);
             };
 
@@ -264,10 +283,12 @@ module.exports = {
 
 
             render() {
-                const { activeProject, createProjectShow, showModal, selectedFeature } = this.state;
+                const { activeProject, createProjectShow, isLoggedIn, showModal, selectedFeature } = this.state;
                 const isProjectSelected = activeProject.id !== 0;
+                const getProjectName = this.getProjectName();
                 return (
                     <div role="tabpanel">
+                        <p className='h2' >{`Projekt: ${getProjectName}`  } </p> 
                         <div className="form-select mb-3" style={styleObject.noFormUrl}>
                             <div className="row flex">
                                 <div className="col-sm-8">
@@ -276,6 +297,7 @@ module.exports = {
                                         selectedProject={this.state.selectedProject}
                                         onSelectChange={this.handleProjectSelect}
                                         onCreateClick={this.handleNewProjectStart}
+                                        onStartClick={this.buildProjectList}
                                     />
                                 </div>
                                 {isProjectSelected && (
@@ -286,6 +308,8 @@ module.exports = {
                                     </div>)}
                             </div>
                         </div>
+
+
                         {createProjectShow && (
                             <CreateProjectForm
                                 projectName={this.state.projectName}
@@ -301,9 +325,9 @@ module.exports = {
                         {featuresManager && featuresManager.length() > 0 && (
                             <DraggableBox
                                 style={styleObject.boxStyle}
-                                headerText={ `Projekt:${this.state.activeProject.navn } Antal ledninger: ${featuresManager.length()}`}
+                                headerText={`Underprojekt: ${this.state.activeProject.navn} Antal ledninger: ${featuresManager.length()}`}
                                 onSave={() => {
-                                    const skema = this.getSkemea();
+                                    const skema = this.getSkema();
                                     featuresManager?.saveProjectAsync(skema, this.state.activeProject);
                                 }}
                             >
@@ -329,21 +353,13 @@ module.exports = {
                             </DraggableBox>
                         )}
                         {this.state.showModal && (
-                            <div style={styleObject.modalOverlay} onClick={() => this.setState({ showModal: false })}>
-                                <div style={styleObject.modalContent} onClick={(e) => e.stopPropagation()}>
-                                    <h3>Feature Info</h3>
-                                    <p><strong>Opstrøms brønd:</strong> {this.state.selectedFeature.properties.fra_brønd}</p>
-                                    <p><strong>Nedstrøms brønd:</strong> {this.state.selectedFeature.properties.til_brønd}</p>
-                                    <textarea autoFocus
-                                        onChange={(e) => this.handleProjectBem(e)}
-                                        value={this.state.selectedFeature.properties.bem}
-                                        className="w-100"
-                                        placeholder="Opgave beskrivelse">
-                                    </textarea>
-                                    <button onClick={() => this.setState({ showModal: false })}>Luk</button>
-                                    <button onClick={(e) => this.handleProjectGem(e)}>Gem</button>
-                                </div>
-                            </div>
+                            <EditDialog
+                                onBemChange={this.handleProjectBem}
+                                onClose={() => this.handleFeatureEdit(false)}
+                                onSave={() => this.handleFeatureEdit(true)}
+                                feature={this.state.selectedFeature}
+                                styles={styleObject}
+                            />
                         )}
                     </div>
 

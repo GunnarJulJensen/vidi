@@ -1,6 +1,3 @@
-const { over, head } = require("lodash");
-const height = require("../../../browser/modules/height");
-
 const styleObject = {
 
     boxStyle: {

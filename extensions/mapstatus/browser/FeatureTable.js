@@ -83,20 +83,6 @@ class FeatureTable extends React.Component {
                                         )}
                                     </th>
                                 ))}
-                                {/* <th style={styleObject.tableHeaderSmall}></th>
-                                <th style={styleObject.tableHeader}>Opstr.</th>
-                                <th style={styleObject.tableHeader}>Nedstr.</th>
-                                <th style={styleObject.tableHeader}>System</th>
-                                <th style={styleObject.tableHeader}>Kategori</th>
-                                <th style={styleObject.tableHeader}>Materiale</th>
-                                <th style={styleObject.tableHeader}>Rør diameter</th>
-                                <th style={styleObject.tableHeader}>Længde</th>
-                                <th style={styleObject.tableHeader}>Fra kote</th>
-                                <th style={styleObject.tableHeader}>Til kote</th>
-                                <th style={styleObject.tableHeader}>Dybde</th>
-                                <th style={styleObject.tableHeader}>Fysisk indeks</th>
-                                <th style={styleObject.tableHeader}>Bemærkning</th>
-                                <th style={styleObject.tableHeaderSmall}></th> */}
                             </tr>
                         </thead>
                         <tbody style={styles.tbodyStyle}>
