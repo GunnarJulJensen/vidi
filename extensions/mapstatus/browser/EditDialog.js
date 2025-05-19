@@ -41,24 +41,74 @@ class EditDialog extends React.Component {
         const { onBemChange, onClose, onSave, feature, styles } = this.props;
         return (
             <div style={styles.modalOverlay} >
-                <div style={styles.modalContent} className="modalDialog" onClick={(e) => e.stopPropagation()}>
-                    <div className="modalContent">
+                <div style={styles.modalContent} className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content">
                         <div className="modal-header">
                             <button type="button" className="close" onClick={onClose} data-dismiss="modal">&times;</button>
                             <h4 className="modal-title">Modal Header</h4>
                         </div>
                         <div>
 
-                            <div className="modalBody">
+                            <div className="modal-body">
                                 <div className="row">
-                                    <p><strong>Opstrøms brønd:</strong> {feature.properties.fra_brønd}</p>
-                                    <p><strong>Nedstrøms brønd:</strong> {feature.properties.til_brønd}</p>
-                                    <p><strong>System:</strong> {feature.properties.system}</p>
-                                    <p><strong>Kategori:</strong> {feature.properties.kategori}</p>
-                                    <p><strong>Materiale:</strong> {feature.properties.materiale}</p>
-                                    <p><strong>Handelsmål:</strong> {feature.properties.handelsmål}</p>
-                                    <p><strong>Længde:</strong> {feature.properties.længde}</p>
+                                    <div className="col-sm-6">
+                                        <label htmlFor="opstrømsBrønd">Opstrøms brønd</label>   
+                                    </div>
+                                    <div className="col-sm-6">    
+                                        <p >{feature.properties.fra_brønd}</p>
+                                    </div>
                                 </div>
+                                <div className="row">
+                                    <div className="col-sm-6">
+                                        <label htmlFor="nedstrømsBrønd">Nedstrøms brønd</label>
+                                    </div>
+                                    <div className="col-sm-6">
+                                        <p>{feature.properties.til_brønd}</p>
+                                    </div>
+                                </div>  
+                                <div className="row">
+                                    <div className="col-sm-6">  
+                                        <label htmlFor="system">System</label>
+                                    </div>
+                                    <div className="col-sm-6">
+                                        <p>{feature.properties.system}</p>
+                                    </div>
+                                </div>
+                                <div className="row">
+                                    <div className="col-sm-6">
+                                        <label htmlFor="kategori">Kategori</label>
+                                    </div>
+                                    <div className="col-sm-6">
+                                        <p>{feature.properties.kategori}</p>
+                                    </div>
+                                </div>
+                                <div className="row">
+                                    <div className="col-sm-6">
+                                        <label htmlFor="materiale">Materiale</label>    
+                                    </div>
+                                    <div className="col-sm-6"> 
+                                        <p>{feature.properties.materiale}</p>
+                                    
+                                    </div>
+                                </div>
+                                <div className="row">
+                                    <div className="col-sm-6">
+                                        <label htmlFor="handelsmål">Handelsmål</label>
+                                    </div>
+                                    <div className="col-sm-6">  
+                                        <p>{feature.properties.handelsmål}</p>
+                                    </div>
+                                </div>
+                                <div className="row">
+                                    <div className="col-sm-6">  
+                                        <label htmlFor="længde">Længde</label>
+                                    </div>
+                                    <div className="col-sm-6">
+                                        <p>{feature.properties.længde}</p>  
+                                    </div>
+                                </div>
+                     
+                                <hr></hr>
                                 <label htmlFor="reperationMetode">Reperationsmetode</label>
                                 <select
                                     className="w-100"

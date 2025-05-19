@@ -27,6 +27,11 @@ export default class SelectedFeaturesManager {
   }
 
   addFeature(feature) {
+    Object.keys(feature.properties).forEach(key => {
+      if (!feature.properties[key]) {
+        feature.properties[key] = '';
+      }
+    });
     this._geojson.features.push(feature);
   }
 

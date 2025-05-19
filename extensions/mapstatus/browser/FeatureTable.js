@@ -42,8 +42,11 @@ class FeatureTable extends React.Component {
         const newDirection = isSameColumn && this.state.sortDirection === 'asc' ? 'desc' : 'asc';
 
         const sortedData = [...this.state.features].sort((a, b) => {
-            const valA = column.isNumeric ? Number(a.properties[sortKey]) : a.properties[sortKey].toLowerCase();
-            const valB = column.isNumeric ? Number(b.properties[sortKey]) : b.properties[sortKey].toLowerCase();
+            if (!column.isNumeric && (a.properties[sortKey] === null || b.properties[sortKey] === null)) {
+                return 0;
+            }
+            const valA = column.isNumeric ? Number(a.properties[sortKey]) : a.properties[sortKey]?.toLowerCase();
+            const valB = column.isNumeric ? Number(b.properties[sortKey]) : b.properties[sortKey]?.toLowerCase();
             if (valA < valB) return newDirection === 'asc' ? -1 : 1;
             if (valA > valB) return newDirection === 'asc' ? 1 : -1;
             return 0;
