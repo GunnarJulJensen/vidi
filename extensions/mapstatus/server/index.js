@@ -117,7 +117,7 @@ router.get(
         guard(req, response);
         
         const projektid = req.params.projektid;
-        const sql = `SELECT id, navn, beskrivelse,geojson FROM ${SCHEMA}.${TABLEDATA} where id = ${projektid}`;
+        const sql = `SELECT id, navn, COALESCE(beskrivelse,'') as beskrivelse, geojson FROM ${SCHEMA}.${TABLEDATA} where id = ${projektid}`;
         SQLAPI(sql, req)
             .then((result) => {
                 response.json(result);
@@ -139,7 +139,7 @@ router.get(
         guard(req, response);
 
         const skema = req.params.skema;
-        const sql = `SELECT id, navn, beskrivelse FROM ${SCHEMA}.${TABLEDATA} where skema = '${skema}' order by navn`;
+        const sql = `SELECT id, navn,  COALESCE(beskrivelse,'') as beskrivelse FROM ${SCHEMA}.${TABLEDATA} where skema = '${skema}' order by navn`;
         //console.log(sql);
 
         // Pak SQLAPI i promise chain
@@ -194,6 +194,32 @@ router.post(
         const projekt = req.body;
         const sql = `UPDATE  ${SCHEMA}.${TABLEDATA} set
             geojson ='${JSON.stringify(projekt.geojson)}' , 
+            navn ='${projekt.navn}',
+            beskrivelse = '${projekt.beskrivelse}' 
+            WHERE id = ${projekt.id}`;
+
+        SQLAPI(sql, req)
+            .then((result) => {
+                response.json(result);
+            })
+            .catch((err) => {
+                console.error("Fejl i SQLAPI:", err);
+                response.status(500).send("Fejl ved databaseopslag");
+            });
+    }   
+);
+
+/**********************************************************************
+ * POST /api/extension/mapstatus/saveproject/:skema
+ * 
+ *  Opdaterer eksisterende projekt til DB. Kun projekt navn og beskrivelse
+ *  
+ **********************************************************************/    
+router.post(
+    "/api/extension/mapstatus/saveprojectmeta/", (req, response) => {
+        guard(req, response);
+        const projekt = req.body;
+        const sql = `UPDATE  ${SCHEMA}.${TABLEDATA} set
             navn ='${projekt.navn}',
             beskrivelse = '${projekt.beskrivelse}' 
             WHERE id = ${projekt.id}`;

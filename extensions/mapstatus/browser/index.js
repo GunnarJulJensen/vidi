@@ -5,7 +5,7 @@
  */
 
 'use strict';
-import React from 'react';
+import React, { act } from 'react';
 
 import CreateProjectForm from "./CreateProjectForm.js";
 import DraggableBox from "./DraggableBox.js";
@@ -119,9 +119,6 @@ module.exports = {
             constructor(props) {
                 super(props);
                 this.state = {
-                    createProjectShow: false,
-                    projectName: "",
-                    projectDescription: "",
                     activeProject: this.createProjectData() || {},
                     projects: [],
                     //selectedProjectId: 0,
@@ -180,7 +177,7 @@ module.exports = {
             createProjectData() {
                 return {
                     id: 0,
-                    navn: 'Uden navn',
+                    navn: '',
                     beskrivelse: '',
                     skema: ''
                 };
@@ -195,24 +192,6 @@ module.exports = {
                 featuresManager?.updateFeature(feature.properties.id); // Opdaterer stilen for den valgte feature
             };
 
-            showCreateProjectModal = (show) => {
-                this.setState({ createProjectShow: show });
-            };
-
-            addProject = (projectName) => {
-                const value = this.state.projects.length + 1;
-                this.state.projects.push({ value, label: projectName });
-                this.setState({ projectName: '' });
-                this.setState({ projectDescription: '' });
-                this.setState({ selectedProjectId: value });
-                this.setState(prevState => ({ projektData: { ...prevState.projektData, navn: projectName } }));
-                this.showCreateProjectModal(false)
-
-
-                this.forceUpdate();
-                alert("Projekt oprettet: " + projectName);
-            };
-
             getSkema = () => {
                 const words = window.location.pathname.split("/").filter(Boolean);
                 return words.length > 0 ? words[words.length - 1] : '';
@@ -221,36 +200,48 @@ module.exports = {
             getProjectName = () => {
                 let projectName = this.getSkema();
                 projectName = projectName.replace('dd_', '');
+                projectName = projectName.replace('_', ' ');
                 projectName = projectName.charAt(0).toUpperCase() + projectName.slice(1)
                 return projectName;
-            }    
+            }
 
 
             handleProjectName = (event) => {
-                this.setState({ projectName: event.target.value });
-                this.state.projectName = event.target.value;
-                this.forceUpdate();
+                this.setState({ activeProject: { ...this.state.activeProject, navn: event.target.value } });
             };
 
-            handleProjectBem = (bemark) => {
+            handleProjectDesciption = (event) => {
+                this.setState({ activeProject: { ...this.state.activeProject, beskrivelse: event.target.value } });
+            };
+
+            handleProjectEdit = async () => {
+                const projectId = this.state.activeProject.id;
+                const projectName = this.state.activeProject.navn.trim();
+                if (projectId) {
+                    await featuresManager?.saveProjectMetaAsync(this.state.activeProject);
+                } else {
+                    console.error("Project not found with id: " + projectId);
+                }
+            };
+
+            handleFeatureBem = (bemark) => {
                 const editFeature = JSON.parse(JSON.stringify(this.state.selectedFeature));
                 editFeature.properties.bem = bemark;
                 this.setState({ selectedFeature: editFeature });
+                this.handleFeatureEdit();
             };
 
-            handleFeatureEdit = (save) => {
-                if (save) {
-                    const featureId = this.state.selectedFeature.properties.id;
-                    const bemark = this.state.selectedFeature.properties.bem.trim();
+            handleFeatureEdit = () => {
+                const featureId = this.state.selectedFeature.properties.id;
+                const bemark = this.state.selectedFeature.properties.bem.trim();
 
-                    if (featureId) {
-                        featuresManager?.updateFeatureProperty(featureId, "bem", bemark); // selectedFeatureUpdate(featureId, "bem", bemark);
-                        backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
-                    } else {
-                        console.error("Feature not found with id: " + featureId);
-                    }
+                if (featureId) {
+                    featuresManager?.updateFeatureProperty(featureId, "bem", bemark); // selectedFeatureUpdate(featureId, "bem", bemark);
+                    backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
+                } else {
+                    console.error("Feature not found with id: " + featureId);
                 }
-                this.setState({ showModal: false })
+                // this.setState({ showModal: false })
             };
 
             exportExcel = () => {
@@ -260,6 +251,12 @@ module.exports = {
 
             handleProjectSelect = (selectedProjectId) => {
                 _self.active(true);
+                if (selectedProjectId === '0') {
+                    this.setState({ activeProject: this.createProjectData() });
+                    this.setState({ selectedRowIndex: -1 });
+                    featuresManager?.clear();
+                    return;
+                }
                 featuresManager?.getProjectAsync(selectedProjectId, this.createProjectData())
                     .then((data) => {
                         this.setState({ activeProject: data });
@@ -272,23 +269,21 @@ module.exports = {
             };
 
             handleNewProjectStart = () => {
-                this.setState({ createProjectShow: true });
                 _self.active(true);
                 this.setState({ activeProject: this.createProjectData() });
                 this.setState({ selectedRowIndex: -1 });
                 this.setState({ showModal: false });
-                this.showCreateProjectModal(true)
                 featuresManager?.clear();
             }
 
 
             render() {
-                const { activeProject, createProjectShow, isLoggedIn, showModal, selectedFeature } = this.state;
+                const { activeProject, isLoggedIn, showModal, selectedFeature } = this.state;
                 const isProjectSelected = activeProject.id !== 0;
                 const getProjectName = this.getProjectName();
                 return (
                     <div role="tabpanel">
-                        <p className='h2' >{`Projekt: ${getProjectName}`  } </p> 
+                        <p className='h2' >{`Kunde: ${getProjectName}`} </p>
                         <div className="form-select mb-3" style={styleObject.noFormUrl}>
                             <div className="row flex">
                                 <div className="col-sm-8">
@@ -307,20 +302,15 @@ module.exports = {
                                         </button>
                                     </div>)}
                             </div>
-                        </div>
 
-
-                        {createProjectShow && (
                             <CreateProjectForm
-                                projectName={this.state.projectName}
-                                projectDescription={this.state.projectDescription}
-                                onProjectNameChange={this.handleProjectName}
-                                onProjectDescriptionChange={(e) => this.setState({ projectDescription: e.target.value })}
-                                onClose={() => this.showCreateProjectModal(false)}
-                                onSave={() => this.addProject(this.state.projectName)}
+                                projectInfo={this.state.activeProject}
+                                onSaveClick={this.handleProjectEdit}
+                                isNewProject={this.state.activeProject.id === 0}
+                                onProjectNameChanged={this.handleProjectName}
+                                onProjectDescriptionChanged={this.handleProjectDesciption}
                             />
-                        )}
-
+                        </div>
 
                         {featuresManager && featuresManager.length() > 0 && (
                             <DraggableBox
@@ -354,7 +344,7 @@ module.exports = {
                         )}
                         {this.state.showModal && (
                             <EditDialog
-                                onBemChange={this.handleProjectBem}
+                                onBemChange={this.handleFeatureBem}
                                 onClose={() => this.handleFeatureEdit(false)}
                                 onSave={() => this.handleFeatureEdit(true)}
                                 feature={this.state.selectedFeature}

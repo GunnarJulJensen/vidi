@@ -118,6 +118,37 @@ export default class SelectedFeaturesManager {
       feature.properties[propertyName] = value;
     }
   }
+  
+async saveProjectMetaAsync(projektData) {
+    try {
+
+      const projectBody = {
+        ...projektData,
+
+      };
+
+      const url = `/api/extension/mapstatus/saveprojectmeta/`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(projectBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+
+    } catch (e) {
+      console.error("Error in saveProjectAsync:", e);
+      return {};
+    }
+  }
 
 
   async saveProjectAsync(skema, projektData) {
@@ -192,7 +223,7 @@ export default class SelectedFeaturesManager {
       const url = `/api/extension/mapstatus/GetProjects/${skema}`;
       const data = await this.fetchDataAsync(url);
       const projects = data.features.map((feature) => ({ id: feature.properties.id, label: feature.properties.navn }));
-      projects.unshift({ id: 0, label: "Vælg projekt" });
+      projects.unshift({ id: 0, label: "Vælg projekt eller opret nyt" });
 
       return projects;
     } catch (e) {

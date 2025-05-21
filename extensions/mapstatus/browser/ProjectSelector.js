@@ -3,11 +3,13 @@ import React from "react";
 class ProjectSelector extends React.Component {
     render() {
         const { projects, selectedProject, onSelectChange, onCreateClick, onStartClick } = this.props;
+        const showNewProject = selectedProject== null ? false:   selectedProject.id === 0;
+        
         return (
             <div className="mb-3">
                 {Object.entries(projects).length > 0 && (
                     <div className="mb-3">  
-                        <p>Vælg underprojekt</p>
+                        <p>Vælg projekt</p>
                         <select
                             className="w-100"
                             value={selectedProject}
@@ -16,11 +18,11 @@ class ProjectSelector extends React.Component {
                                 <option key={index} value={option.id}>{option.label}</option>
                             ))}
                         </select>
-                        <div>
+                        { showNewProject && (<div>
                             <button className="btn btn-primary mt-2 w-100 " onClick={onCreateClick}>
-                                Start projekt
+                                Opret nyt projekt
                             </button>
-                        </div>
+                        </div>)}
                     </div>
                 )}
                 {Object.entries(projects).length === 0 && (
