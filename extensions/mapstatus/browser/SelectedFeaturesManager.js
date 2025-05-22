@@ -126,9 +126,7 @@ async saveProjectMetaAsync(projektData) {
         ...projektData,
 
       };
-
-      const url = `/api/extension/mapstatus/saveprojectmeta/`;
-
+      const url =projektData.id == 0 ? `/api/extension/mapstatus/createroject/` :  `/api/extension/mapstatus/saveprojectmeta/`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {

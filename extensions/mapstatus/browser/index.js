@@ -215,13 +215,7 @@ module.exports = {
             };
 
             handleProjectEdit = async () => {
-                const projectId = this.state.activeProject.id;
-                const projectName = this.state.activeProject.navn.trim();
-                if (projectId) {
-                    await featuresManager?.saveProjectMetaAsync(this.state.activeProject);
-                } else {
-                    console.error("Project not found with id: " + projectId);
-                }
+                await featuresManager?.saveProjectMetaAsync(this.state.activeProject);
             };
 
             handleFeatureBem = (bemark) => {
