@@ -121,7 +121,6 @@ module.exports = {
                 this.state = {
                     activeProject: this.createProjectData() || {},
                     projects: [],
-                    //selectedProjectId: 0,
                     selectedRowIndex: -1,
                     showModal: false,
                     selectedFeatureId: 0,
@@ -134,12 +133,24 @@ module.exports = {
 
             rowRefs = [];
 
+            get isNewProject() {
+                return this.state.activeProject.id == 0;
+            }
+
             buildProjectList = () => {
                 const skema = this.getSkema();
                 featuresManager?.getAllProjects(skema)
                     .then((projectOptions) => {
-                        this.setState({ projects: projectOptions });
-                        this.setState({ isLoggedIn: true });
+                        if (projectOptions.length > 0) {
+                            this.setState({ projects: projectOptions });
+                            this.setState({ isLoggedIn: true });
+                            console.log("logged in");
+                        }
+                        else {
+                            this.setState({ projects: [] });
+                            this.setState({ isLoggedIn: false });
+                            console.log("not logged in");
+                        }
                     })
                     .catch((error) => {
                         this.setState({ isLoggedIn: false });
@@ -179,7 +190,7 @@ module.exports = {
                     id: 0,
                     navn: '',
                     beskrivelse: '',
-                    skema: ''
+                    skema: this.getSkema(),
                 };
             }
 
@@ -210,33 +221,47 @@ module.exports = {
                 this.setState({ activeProject: { ...this.state.activeProject, navn: event.target.value } });
             };
 
-            handleProjectDesciption = (event) => {
+
+            handleProjectDescription = (event) => {
                 this.setState({ activeProject: { ...this.state.activeProject, beskrivelse: event.target.value } });
             };
 
-            handleProjectEdit = async () => {
-                await featuresManager?.saveProjectMetaAsync(this.state.activeProject);
-            };
+            handleProjectEdit = () => {
+                featuresManager?.saveProjectMetaAsync(this.state.activeProject)
+                    .then(() => {
+                        this.buildProjectList();
+                    })
+                    .catch((error) => {
+                        console.error("Fejl ved gem af projekt:", error);
+                    });
+            }
 
-            handleFeatureBem = (bemark) => {
-                const editFeature = JSON.parse(JSON.stringify(this.state.selectedFeature));
-                editFeature.properties.bem = bemark;
-                this.setState({ selectedFeature: editFeature });
-                this.handleFeatureEdit();
-            };
+            // handleFeatureBem = (bemark) => {
+            //     const editFeature = JSON.parse(JSON.stringify(this.state.selectedFeature));
+            //     editFeature.properties.bem = bemark;
+            //     this.setState({ selectedFeature: editFeature });
+            //     this.handleFeatureEdit();
+            // };
 
-            handleFeatureEdit = () => {
-                const featureId = this.state.selectedFeature.properties.id;
-                const bemark = this.state.selectedFeature.properties.bem.trim();
+            // handleFeatureEdit = (save) => {
+            //     if (save) {
+            //         const featureId = this.state.selectedFeature.properties.id;
+            //         const bemark = this.state.selectedFeature.properties.bem.trim();
+            //         const metode = this.state.selectedFeature.properties.metode;
+            //         const terraen = this.state.selectedFeature.properties.terraen;
 
-                if (featureId) {
-                    featuresManager?.updateFeatureProperty(featureId, "bem", bemark); // selectedFeatureUpdate(featureId, "bem", bemark);
-                    backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
-                } else {
-                    console.error("Feature not found with id: " + featureId);
-                }
-                // this.setState({ showModal: false })
-            };
+            //         if (featureId) {
+            //             featuresManager?.updateFeatureProperty(featureId, "bem", bemark);
+            //             featuresManager?.updateFeatureProperty(featureId, "metode", metode);
+            //             featuresManager?.updateFeatureProperty(featureId, "terraen", terraen);
+            //             backboneEvents.get().trigger(`${MAPSTATUS_MODULE_NAME}:update`);
+            //         } else {
+            //             console.error("Feature not found with id: " + featureId);
+            //         }
+            //     } 
+
+            //     this.setState({ showModal: false })
+            // };
 
             exportExcel = () => {
                 const name = this.state.activeProject?.navn || this.state.projectName;
@@ -245,7 +270,8 @@ module.exports = {
 
             handleProjectSelect = (selectedProjectId) => {
                 _self.active(true);
-                if (selectedProjectId === '0') {
+                const isNewProject = selectedProjectId == 0;
+                if (isNewProject) {
                     this.setState({ activeProject: this.createProjectData() });
                     this.setState({ selectedRowIndex: -1 });
                     featuresManager?.clear();
@@ -254,8 +280,6 @@ module.exports = {
                 featuresManager?.getProjectAsync(selectedProjectId, this.createProjectData())
                     .then((data) => {
                         this.setState({ activeProject: data });
-                        this.setState({ projektData: data });
-                        this.forceUpdate();
                     })
                     .catch((error) => {
                         console.error("Error fetching project:", error);
@@ -275,6 +299,7 @@ module.exports = {
                 const { activeProject, isLoggedIn, showModal, selectedFeature } = this.state;
                 const isProjectSelected = activeProject.id !== 0;
                 const getProjectName = this.getProjectName();
+                const isNewProject = this.isNewProject;
                 return (
                     <div role="tabpanel">
                         <p className='h2' >{`Kunde: ${getProjectName}`} </p>
@@ -282,6 +307,7 @@ module.exports = {
                             <div className="row flex">
                                 <div className="col-sm-8">
                                     <ProjectSelector
+                                        isLoggedIn={isLoggedIn}
                                         projects={this.state.projects}
                                         selectedProject={this.state.selectedProject}
                                         onSelectChange={this.handleProjectSelect}
@@ -289,7 +315,7 @@ module.exports = {
                                         onStartClick={this.buildProjectList}
                                     />
                                 </div>
-                                {isProjectSelected && (
+                                {isLoggedIn && isProjectSelected && (
                                     <div className="d-flex justify-content-between col-sm-4 h-50 d-inline-block" >
                                         <button className="btn btn-primary" onClick={() => this.exportExcel()}>
                                             Excel
@@ -297,19 +323,20 @@ module.exports = {
                                     </div>)}
                             </div>
 
-                            <CreateProjectForm
+                            {isLoggedIn && <CreateProjectForm
                                 projectInfo={this.state.activeProject}
                                 onSaveClick={this.handleProjectEdit}
-                                isNewProject={this.state.activeProject.id === 0}
+                                isNewProject={isNewProject}
                                 onProjectNameChanged={this.handleProjectName}
-                                onProjectDescriptionChanged={this.handleProjectDesciption}
-                            />
+                                onProjectDescriptionChanged={this.handleProjectDescription}
+                            />}
                         </div>
 
                         {featuresManager && featuresManager.length() > 0 && (
                             <DraggableBox
                                 style={styleObject.boxStyle}
-                                headerText={`Underprojekt: ${this.state.activeProject.navn} Antal ledninger: ${featuresManager.length()}`}
+                                headerText={`${this.state.activeProject.navn}`}
+                                detailText={`Antal ledninger: ${featuresManager.length()}`}
                                 onSave={() => {
                                     const skema = this.getSkema();
                                     featuresManager?.saveProjectAsync(skema, this.state.activeProject);
@@ -338,9 +365,7 @@ module.exports = {
                         )}
                         {this.state.showModal && (
                             <EditDialog
-                                onBemChange={this.handleFeatureBem}
-                                onClose={() => this.handleFeatureEdit(false)}
-                                onSave={() => this.handleFeatureEdit(true)}
+                                onSave={() => this.setState({ showModal: false })} // this.handleFeatureEdit(true)}
                                 feature={this.state.selectedFeature}
                                 styles={styleObject}
                             />
@@ -403,6 +428,7 @@ module.exports = {
             console.error("Layer not found in metadata: " + layerId);
         }
     },
+
     fullLayerName: (layerId) => {
         const metaData = meta.getMetaData();
         const layer = metaData.data.find(f => f.f_table_name == layerId);

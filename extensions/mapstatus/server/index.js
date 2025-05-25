@@ -169,7 +169,7 @@ router.post(
         guard(req, response);
         const projekt = req.body;
         const skema = req.params.skema;
-        const sql = `INSERT INTO ${SCHEMA}.${TABLEDATA} (skema,  navn, beskrivelse) VALUES ('${skema}', '${projekt.navn}', '${projekt.beskrivelse}')`;
+        const sql = `INSERT INTO ${SCHEMA}.${TABLEDATA} (skema,  navn, beskrivelse) VALUES ('${projekt.skema}', '${projekt.navn}', '${projekt.beskrivelse}')`;
 
         SQLAPI(sql, req)
             .then((result) => {

@@ -2,37 +2,49 @@ import React from "react";
 
 class ProjectSelector extends React.Component {
     render() {
-        const { projects, selectedProject, onSelectChange, onCreateClick, onStartClick } = this.props;
-        const showNewProject = selectedProject== null ? false:   selectedProject.id === 0;
-        
+        const {
+            isLoggedIn,
+            projects,
+            selectedProject,
+            onSelectChange,
+            onCreateClick,
+            onStartClick
+        } = this.props;
+        const showNewProject = selectedProject?.id === 0;
+
         return (
             <div className="mb-3">
-                {Object.entries(projects).length > 0 && (
-                    <div className="mb-3">  
+                {isLoggedIn && Object.entries(projects).length > 0 && (
+                    <div className="mb-3">
                         <p>Vælg projekt</p>
                         <select
                             className="w-100"
-                            value={selectedProject}
+                            value={selectedProject?.id}
                             onChange={(e) => onSelectChange(e.target.value)}>
                             {projects.map((option, index) => (
-                                <option key={index} value={option.id}>{option.label}</option>
+                                <option
+                                    key={index}
+                                    value={option.id}>
+                                    {option.label}
+                                </option>
                             ))}
                         </select>
-                        { showNewProject && (<div>
+                        {showNewProject && (<div>
                             <button className="btn btn-primary mt-2 w-100 " onClick={onCreateClick}>
                                 Opret nyt projekt
                             </button>
                         </div>)}
                     </div>
                 )}
-                {Object.entries(projects).length === 0 && (
+
+                {!isLoggedIn && (
                     <div className="mb-3">
-                        <p>Ingen projekter tilgængelige eller der er ikke logget ind</p>
+                        <p>Login og tryk på start</p>
                         <button className="btn btn-primary mt-2 w-100 " onClick={onStartClick}>
                             Start
                         </button>
                     </div>
-                )}  
+                )}
             </div>
         );
     }

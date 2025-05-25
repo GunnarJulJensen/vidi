@@ -47,8 +47,15 @@ export default class SelectedFeaturesManager {
         feature.properties.isSelected = true;
       }
       if (!feature.properties.hasOwnProperty("bem")) {
-        feature.properties.bem = "...";
+        feature.properties.bem = "";
       }
+      if (!feature.properties.hasOwnProperty("metode")) {
+        feature.properties.metode = "";
+      }
+      if (!feature.properties.hasOwnProperty("terraen")) {
+        feature.properties.terraen = "";
+      }
+
     });
   }
 
@@ -124,9 +131,10 @@ async saveProjectMetaAsync(projektData) {
 
       const projectBody = {
         ...projektData,
-
       };
+
       const url =projektData.id == 0 ? `/api/extension/mapstatus/createroject/` :  `/api/extension/mapstatus/saveprojectmeta/`;
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -249,6 +257,8 @@ async saveProjectMetaAsync(projektData) {
       'Til kote',
       'Dybde',
       'Fysisk indeks',
+      'Metode',
+      'Terræn',
       'Bemærkning'];
 
     const rows = this._geojson.features
@@ -265,7 +275,9 @@ async saveProjectMetaAsync(projektData) {
         [headers[8]]: f.properties.til_kote,
         [headers[9]]: f.properties.dybde,
         [headers[10]]: f.properties.fysiskindeks,
-        [headers[11]]: f.properties.bem
+        [headers[11]]: f.properties.metode,
+        [headers[12]]: f.properties.terraen,
+        [headers[13]]: f.properties.bem
       }));
 
     if (rows.length === 0) {

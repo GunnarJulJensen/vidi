@@ -22,16 +22,19 @@ class FeatureTable extends React.Component {
             { key: 'til_kote', label: 'Til kote' , isNumeric: true},
             { key: 'dybde', label: 'Dybde', isNumeric: true },
             { key: 'fysiskindeks', label: 'Fysisk indeks' , isNumeric: true},
+            { key: 'metode', label: 'Metode' , isNumeric: false},
+            { key: 'terraen', label: 'Terræn' , isNumeric: false},
             { key: 'bem', label: 'Bemærkning' , isNumeric: false},
             { key: 'cmd', label: '' , isNumeric: false},
         ];
+    };
 
-    }
     componentDidUpdate(prevProps) {
         if (prevProps.features !== this.props.features) {
             this.setState({ features: this.props.features });
         }
-    }
+    };
+
     handleHeaderClick = (event) => {
         if (event.target.tagName !== 'TH') return;
         const clickedIndex = event.target.cellIndex;
@@ -59,6 +62,7 @@ class FeatureTable extends React.Component {
         });
         this.forceUpdate()
     };
+
     render() {
         const {
             selectedRowIndex,
@@ -122,6 +126,8 @@ class FeatureTable extends React.Component {
                                     <td>{feature.properties.til_kote}</td>
                                     <td>MANGLER!</td>
                                     <td>{feature.properties.fysiskindeks}</td>
+                                    <td style={styles.cellStyleLongText}>{feature.properties.metode}</td>
+                                    <td style={styles.cellStyleLongText}>{feature.properties.terraen}</td>
                                     <td style={styles.cellStyleLongText}>{feature.properties.bem}</td>
                                     <td >
                                         <i className="bi bi-pen" onClick={() => onEditClick(feature.properties.id)} />

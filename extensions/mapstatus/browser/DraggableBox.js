@@ -66,7 +66,7 @@ class DraggableBox extends React.Component {
     }
 
     render() {
-        const { children, style, headerText, onSave } = this.props;
+        const { children, style, headerText, detailText, onSave } = this.props;
 
         return (
             <div onMouseDown={this.handleMouseDown}
@@ -74,15 +74,21 @@ class DraggableBox extends React.Component {
                 ref={this.boxRef}
             >
                 <div className="bg-light border-bottom border-2 border-primary">
-                    <div className="row align-items-center">
-                        <div className="col-sm-10">
-                            <p className="fs-6 " >{headerText}</p>
-                            <p>anden tekst</p>
+                    <div className="row align-items-start">
+                        <div className="col-md-10">
+
+                            <h6 className="text-sm text-gray-500">Projekt!</h6>
+                            <h2 className="text-xl font-bold">{headerText}</h2>
                         </div>
-                        <div className="col-sm-2">
+                        <div className="col-md-2">
+
+                            <div className="flex-1">
+                                <p className="text-base text-gray-700">{detailText}</p>
+                            </div>
+                        </div>
+                        <div className="col-md-2 d-flex justify-content-end align-items-start">
                             <button className="btn btn-primary"
-                                onClick={onSave}
-                            >
+                                onClick={onSave}>
                                 <i className="bi bi-save me-2"></i>
                                 Gem
                             </button>
