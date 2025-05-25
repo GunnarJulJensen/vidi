@@ -58,12 +58,12 @@ class EditDialog extends React.Component {
     }
 
     render() {
-        const { onClose, onSave, feature, styles } = this.props;
+        const { onSave, feature, styles } = this.props;
         return (
             <div className="modal" role="dialog" style={styles.modalOverlay} >
                 <div style={styles.modalContent} className="modal-content" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
-                        <button type="button" className="close" onClick={onClose} data-dismiss="modal">&times;</button>
+                        <button type="button" className="close" onClick={onSave} data-dismiss="modal">&times;</button>
                         <h4 className="modal-title">Ledning</h4>
                     </div>
                     <div className="modal-body">

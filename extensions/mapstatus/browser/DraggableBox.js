@@ -74,19 +74,18 @@ class DraggableBox extends React.Component {
                 ref={this.boxRef}
             >
                 <div className="bg-light border-bottom border-2 border-primary">
-                    <div className="row align-items-start">
-                        <div className="col-md-10">
-
-                            <h6 className="text-sm text-gray-500">Projekt!</h6>
-                            <h2 className="text-xl font-bold">{headerText}</h2>
-                        </div>
-                        <div className="col-md-2">
-
+                    <div className="row align-items-end">
+                        <div className="col-md-10"> 
+                            <div class="d-flex flex-row bd-highlight ma-10">
+                                <h2 className="mr-2">Projekt ! </h2>
+                                <h6 >{headerText}</h6>
+                            </div>
                             <div className="flex-1">
                                 <p className="text-base text-gray-700">{detailText}</p>
                             </div>
+
                         </div>
-                        <div className="col-md-2 d-flex justify-content-end align-items-start">
+                        <div className="col-md-2 d-flex justify-content-end align-items-center">
                             <button className="btn btn-primary"
                                 onClick={onSave}>
                                 <i className="bi bi-save me-2"></i>

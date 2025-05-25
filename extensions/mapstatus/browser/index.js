@@ -365,7 +365,7 @@ module.exports = {
                         )}
                         {this.state.showModal && (
                             <EditDialog
-                                onSave={() => this.setState({ showModal: false })} // this.handleFeatureEdit(true)}
+                                onSave={() => this.setState({ showModal: false })} 
                                 feature={this.state.selectedFeature}
                                 styles={styleObject}
                             />
